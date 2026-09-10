@@ -34,7 +34,7 @@ There is no test framework in this project. Verify changes with `pnpm typecheck 
 
 ```
 app/            layout, globals.css, and page.tsx — the only composition point
-blocks/         page sections (hero, metric-*, regions, settlements, signals)
+blocks/         page sections (hero, metric-*, by-region, settlements)
 globals/        chrome reused across sections (Header, Footer, SectionDivider)
 components/ui/  unmodified shadcn/ui primitives
 lib/mock.ts     the figures — typed exports standing in for on-chain reads
@@ -42,7 +42,7 @@ lib/mock.ts     the figures — typed exports standing in for on-chain reads
 
 Two rules explain most of the structure:
 
-- **Figures and copy are separated.** `lib/mock.ts` holds only values (`Metric`, `MetricPoint`, `Settlement`, `Region`). Headlines, labels, and prose are hardcoded in the block that renders them — so changing what the page *says* means editing that block, not the data file.
+- **Figures and copy are separated.** `lib/mock.ts` holds only values (`Metric`, `MetricPoint`, `Settlement`, `Region`, `RegionStats`). Headlines, labels, and prose are hardcoded in the block that renders them — so changing what the page *says* means editing that block, not the data file.
 - **Blocks take no props and own no layout.** Each section is a zero-prop component that imports its own figures. `app/page.tsx` assembles them and owns all page-level layout (the `max-w-6xl` container, the metrics grid).
 
 The three metric cards are deliberately separate files rather than one parameterized component: each owns its own `ChartConfig`, gradient `id`, and Y-domain math. They are client components (`"use client"`) because of recharts; the rest are server components.
@@ -63,7 +63,3 @@ npx shadcn@latest add button
 ```
 
 Components land in `components/ui/` and are imported as `@/components/ui/button`.
-
-## The editorial rule
-
-An off-chain signal with `value: null` (see [`blocks/off-chain-signals.tsx`](blocks/off-chain-signals.tsx)) renders as an em dash meaning *"not verifiably measured yet."* Never fill one in with an estimate or a placeholder number — the premise of the page is that every displayed figure is verifiable on-chain state.
