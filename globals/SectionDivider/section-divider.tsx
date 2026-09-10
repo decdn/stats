@@ -1,9 +1,9 @@
 export function SectionDivider({
-  left = "uncheatable · on-chain",
-  right = "source: FeeRouter · CapacityBond",
+  left,
+  right,
 }: {
-  left?: string
-  right?: string
+  left: string
+  right: string
 }) {
   return (
     <div className="flex flex-col gap-2 font-mono text-[10px] tracking-wide text-muted-foreground sm:flex-row sm:items-center sm:gap-4 sm:text-[11px] sm:tracking-widest">
