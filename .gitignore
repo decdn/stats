@@ -38,6 +38,7 @@ next-env.d.ts
 
 # cloudflare worker
 .wrangler/
+.dev.vars*
 worker/worker-configuration.d.ts
 
 # claude code
