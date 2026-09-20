@@ -21,6 +21,13 @@ export async function runIndex(env: Env) {
     transport: http(config.rpcUrl, { batch: true }),
   })
 
+  const rpcChainId = await client.getChainId()
+  if (rpcChainId !== config.chainId) {
+    throw new Error(
+      `RPC_URL is chain ${rpcChainId}, expected ${config.chainId} (arbitrum sepolia: https://sepolia-rollup.arbitrum.io/rpc)`
+    )
+  }
+
   const store = statsStore(env)
   const existing = await store.get()
   const stats = existing
