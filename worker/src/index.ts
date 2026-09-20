@@ -1,5 +1,6 @@
 import type { Env } from "./env"
-import { runIndex, STATS_KEY } from "./run"
+import { runIndex } from "./run"
+import { STATS_KEY, statsStore } from "./store"
 
 export default {
   async scheduled(_event, env, ctx) {

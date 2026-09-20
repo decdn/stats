@@ -10,8 +10,7 @@ import {
   trimStats,
   utcDate,
 } from "./stats"
-
-export const STATS_KEY = "stats.json"
+import { statsStore } from "./store"
 
 // One cron tick: read stats.json, index up to MAX_CHUNKS_PER_RUN chunks past
 // lastBlock, write it back. Nothing is written if any step throws, so the
@@ -22,11 +21,12 @@ export async function runIndex(env: Env) {
     transport: http(config.rpcUrl, { batch: true }),
   })
 
-  const object = await env.STATS.get(STATS_KEY)
-  const stats = object
-    ? parseStats(await object.text())
+  const store = statsStore(env)
+  const existing = await store.get()
+  const stats = existing
+    ? parseStats(existing)
     : emptyStats(config.chainId, Number(config.startBlock - 1n))
-  if (object && stats.chainId !== config.chainId) {
+  if (existing && stats.chainId !== config.chainId) {
     throw new Error(
       `stats.json is for chain ${stats.chainId}, worker is configured for ${config.chainId}`
     )
@@ -54,13 +54,8 @@ export async function runIndex(env: Env) {
   trimStats(stats, caughtUp ? utcDate(Date.now() / 1000) : undefined)
   stats.updatedAt = new Date().toISOString()
 
-  await env.STATS.put(STATS_KEY, serializeStats(stats), {
-    httpMetadata: {
-      contentType: "application/json",
-      cacheControl: "public, max-age=60",
-    },
-  })
+  await store.put(serializeStats(stats))
   console.log(
-    `stats.json written: lastBlock=${stats.lastBlock} head=${head} settlements=${stats.totals.settlementCount}${caughtUp ? "" : " (catching up)"}`
+    `stats.json written to ${store.label}: lastBlock=${stats.lastBlock} head=${head} settlements=${stats.totals.settlementCount}${caughtUp ? "" : " (catching up)"}`
   )
 }

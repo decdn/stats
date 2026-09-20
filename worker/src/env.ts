@@ -9,6 +9,11 @@ export type Env = {
   LOG_CHUNK_BLOCKS: string
   MAX_CHUNKS_PER_RUN: string
   CONFIRMATIONS: string
+  // Optional: reach the bucket over R2's S3 API instead of the binding.
+  R2_ACCESS_KEY_ID?: string
+  R2_SECRET_ACCESS_KEY?: string
+  R2_S3_ENDPOINT?: string
+  R2_BUCKET?: string
 }
 
 export type Config = {
