@@ -4,7 +4,7 @@ A single-page status dashboard for the DeCDN network — value settled, bytes se
 
 Built with Next.js (App Router), React 19, Tailwind CSS v4, shadcn/ui, and recharts.
 
-> **Every figure on the page is currently static.** There is no backend, no data fetching, and no API routes — the numbers live in [`lib/mock.ts`](lib/mock.ts) as stand-ins for values that would be read from chain.
+> The settlements table is live: a Cloudflare Worker in [`worker/`](worker/) indexes `FeeRouter.Settled` logs on a cron and writes `stats.json` to R2, which the page reads at build/revalidate time. The metric cards and by-region table are still static stand-ins from [`lib/mock.ts`](lib/mock.ts).
 
 ## Getting started
 
@@ -15,7 +15,25 @@ pnpm install
 pnpm dev
 ```
 
-Then open http://localhost:3000.
+Then open http://localhost:3000. Without a `.env` the settlements table shows mock rows.
+
+### Live on-chain data (local)
+
+```bash
+cp .env.example .env   # fill RPC_URL and START_BLOCK
+pnpm worker:dev        # wrangler dev with a locally emulated R2 bucket, on :8787
+```
+
+Trigger the cron by hand and check the result:
+
+```bash
+curl "http://localhost:8787/__scheduled?cron=*/10+*+*+*+*"
+curl http://localhost:8787/stats.json
+```
+
+Each tick indexes at most `LOG_CHUNK_BLOCKS × MAX_CHUNKS_PER_RUN` blocks (see [`worker/wrangler.jsonc`](worker/wrangler.jsonc)) past `lastBlock`, so the first backfill takes a few ticks; pass `--var LOG_CHUNK_BLOCKS:1000000` to `wrangler dev` if your RPC allows wide `eth_getLogs` ranges. With `STATS_URL=http://localhost:8787/stats.json` in `.env`, `pnpm dev` renders the indexed rows.
+
+Deploy with `pnpm worker:deploy` after `wrangler login`, `wrangler r2 bucket create decdn-stats`, and `wrangler secret put RPC_URL`.
 
 ## Scripts
 
@@ -27,6 +45,8 @@ Then open http://localhost:3000.
 | `pnpm lint`      | ESLint (next core-web-vitals)   |
 | `pnpm typecheck` | `tsc --noEmit`                  |
 | `pnpm format`    | Prettier over `**/*.{ts,tsx}`   |
+| `pnpm worker:dev`    | Run the indexer worker locally (`wrangler dev --test-scheduled`) |
+| `pnpm worker:deploy` | Deploy the worker to Cloudflare |
 
 There is no test framework in this project. Verify changes with `pnpm typecheck && pnpm lint` and by looking at the running dev server.
 

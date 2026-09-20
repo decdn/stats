@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "decdn-stats-worker",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-20",
+  "triggers": { "crons": ["*/10 * * * *"] },
+  "r2_buckets": [{ "binding": "STATS", "bucket_name": "decdn-stats" }],
+  "vars": {
+    "CHAIN_ID": "421614",
+    "FEE_ROUTER": "0xd7B0282d653F89fb641DAe7aEA60157ce92981D0",
+    "LOG_CHUNK_BLOCKS": "10000",
+    "MAX_CHUNKS_PER_RUN": "20",
+    "CONFIRMATIONS": "32"
+  },
+  "observability": { "enabled": true }
+}
