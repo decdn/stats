@@ -74,66 +74,6 @@ export const activeNodesMetric: Metric = {
   series: activeNodesSeries,
 }
 
-export type Settlement = {
-  time: string
-  operator: string
-  bytes: string
-  value: string
-  tx: string
-  href: string
-}
-
-export const settlements: Settlement[] = [
-  {
-    time: "2026-09-08 14:12:07",
-    operator: "0x8f2a...c41d",
-    bytes: "1.42 GB",
-    value: "0.318204",
-    tx: "0x9c17e4...8ab2",
-    href: "#",
-  },
-  {
-    time: "2026-09-08 13:58:41",
-    operator: "0x3bd7...9e06",
-    bytes: "0.87 GB",
-    value: "0.194860",
-    tx: "0x41f0aa...2d75",
-    href: "#",
-  },
-  {
-    time: "2026-09-08 13:41:19",
-    operator: "0xa05c...17f4",
-    bytes: "2.06 GB",
-    value: "0.461332",
-    tx: "0xbe6329...c108",
-    href: "#",
-  },
-  {
-    time: "2026-09-08 13:22:55",
-    operator: "0x6e19...b283",
-    bytes: "0.54 GB",
-    value: "0.120915",
-    tx: "0x27d5b1...f9e4",
-    href: "#",
-  },
-  {
-    time: "2026-09-08 13:04:38",
-    operator: "0xd472...50ac",
-    bytes: "1.79 GB",
-    value: "0.400776",
-    tx: "0x5a8c07...31bd",
-    href: "#",
-  },
-  {
-    time: "2026-09-08 12:47:02",
-    operator: "0x1fc8...e6b9",
-    bytes: "0.93 GB",
-    value: "0.208247",
-    tx: "0xf3049e...7c60",
-    href: "#",
-  },
-]
-
 export type RegionStats = {
   nodes: number
   bytes: number

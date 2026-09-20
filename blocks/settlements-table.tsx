@@ -6,7 +6,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { settlements as mockSettlements, type Settlement } from "@/lib/mock"
 import { getStats } from "@/lib/stats"
 import {
   formatBytes,
@@ -19,12 +18,21 @@ const explorerTxUrl = "https://sepolia.arbiscan.io/tx/"
 // stats.json carries the last 50; the page shows the newest few.
 const visibleRows = 12
 
-async function loadSettlements(): Promise<Settlement[]> {
+type Row = {
+  time: string
+  operator: string
+  bytes: string
+  value: string
+  tx: string
+  href: string
+}
+
+// Every row here is a real Settled log or the table stays empty — there is
+// deliberately no mock fallback, because a plausible-looking fake settlement
+// is the one thing this section must never render.
+async function loadSettlements(): Promise<Row[]> {
   const stats = await getStats()
-  if (!stats) {
-    console.warn("STATS_URL unset — settlements table showing mock data")
-    return mockSettlements
-  }
+  if (!stats) return []
   return stats.settlements.slice(0, visibleRows).map((row) => ({
     time: formatUtcTime(row.timestamp),
     operator: truncateHex(row.operator),
@@ -67,6 +75,16 @@ export async function SettlementsTable() {
           </TableRow>
         </TableHeader>
         <TableBody>
+          {settlements.length === 0 && (
+            <TableRow>
+              <TableCell
+                colSpan={5}
+                className="py-8 text-center text-muted-foreground lowercase"
+              >
+                no settlements indexed yet
+              </TableCell>
+            </TableRow>
+          )}
           {settlements.map((settlement) => (
             <TableRow key={settlement.tx}>
               <TableCell className="text-muted-foreground tabular-nums">
