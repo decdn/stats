@@ -27,6 +27,10 @@ export type DailyPoint = {
 export type Stats = {
   version: 1
   chainId: number
+  // The deployment this file was built from. A run whose config names a
+  // different contract or start block discards the file and re-indexes.
+  feeRouter: Hex
+  startBlock: number
   updatedAt: string
   lastBlock: number
   totals: {
@@ -38,12 +42,18 @@ export type Stats = {
   settlements: SettlementRow[]
 }
 
-export function emptyStats(chainId: number, lastBlock: number): Stats {
+export function emptyStats(
+  chainId: number,
+  feeRouter: Hex,
+  startBlock: number
+): Stats {
   return {
     version: 1,
     chainId,
+    feeRouter,
+    startBlock,
     updatedAt: new Date(0).toISOString(),
-    lastBlock,
+    lastBlock: startBlock - 1,
     totals: { valueSettled: "0", bytesServed: "0", settlementCount: 0 },
     daily: [],
     settlements: [],

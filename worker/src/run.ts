@@ -9,6 +9,7 @@ import {
   serializeStats,
   trimStats,
   utcDate,
+  type Hex,
 } from "./stats"
 import { statsStore } from "./store"
 
@@ -29,14 +30,28 @@ export async function runIndex(env: Env) {
   }
 
   const store = statsStore(env)
+  const fresh = emptyStats(
+    config.chainId,
+    config.feeRouter.toLowerCase() as Hex,
+    Number(config.startBlock)
+  )
   const existing = await store.get()
-  const stats = existing
-    ? parseStats(existing)
-    : emptyStats(config.chainId, Number(config.startBlock - 1n))
+  let stats = existing ? parseStats(existing) : fresh
   if (existing && stats.chainId !== config.chainId) {
     throw new Error(
       `stats.json is for chain ${stats.chainId}, worker is configured for ${config.chainId}`
     )
+  }
+  if (
+    existing &&
+    (stats.feeRouter !== fresh.feeRouter ||
+      stats.startBlock !== fresh.startBlock)
+  ) {
+    // Contracts were redeployed: the old file describes a dead FeeRouter.
+    console.log(
+      `deployment changed (${stats.feeRouter ?? "?"}@${stats.startBlock ?? "?"} → ${fresh.feeRouter}@${fresh.startBlock}); re-indexing from scratch`
+    )
+    stats = fresh
   }
 
   const head = await client.getBlockNumber()

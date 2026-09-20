@@ -35,6 +35,8 @@ Each tick indexes at most `LOG_CHUNK_BLOCKS × MAX_CHUNKS_PER_RUN` blocks (see [
 
 Deploy with `pnpm worker:deploy` after `wrangler login`, `wrangler r2 bucket create decdn-stats`, and `wrangler secret put RPC_URL`.
 
+When the contracts are redeployed, update `FEE_ROUTER` in [`worker/wrangler.jsonc`](worker/wrangler.jsonc) and `START_BLOCK` (the L2 block of the new FeeRouter) from `decdn/contracts/deployments/421614.json`. `stats.json` records the deployment it was built from, so the next tick notices the change and re-indexes from scratch — no manual bucket wipe.
+
 ## Scripts
 
 | Command          | What it does                    |
