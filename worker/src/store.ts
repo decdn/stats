@@ -56,10 +56,14 @@ function s3Store(env: Env): StatsStore {
     label: `s3 ${env.R2_BUCKET}`,
     async get() {
       const res = await client.fetch(url, { method: "GET" })
-      if (res.status === 404) return null
-      if (!res.ok)
-        throw new Error(`s3 get failed: ${res.status} ${await res.text()}`)
-      return res.text()
+      if (res.ok) return res.text()
+      const body = await res.text()
+      // Only a missing key means "not indexed yet"; a missing bucket is a
+      // config error and must not kick off a backfill.
+      if (res.status === 404 && body.includes("<Code>NoSuchKey</Code>")) {
+        return null
+      }
+      throw new Error(`s3 get failed: ${res.status} ${body}`)
     },
     async put(body) {
       const res = await client.fetch(url, {
