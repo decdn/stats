@@ -15,7 +15,7 @@ pnpm install
 pnpm dev
 ```
 
-Then open http://localhost:3000. Without a `.env` the settlements table shows mock rows.
+Then open http://localhost:3000. Without a `.env` the settlements table renders its empty state ("live data not configured"); the metric cards and by-region table are static mock data.
 
 ### Live on-chain data (local)
 
@@ -35,7 +35,7 @@ Each tick indexes at most `LOG_CHUNK_BLOCKS × MAX_CHUNKS_PER_RUN` blocks (see [
 
 Deploy with `pnpm worker:deploy` after `wrangler login`, `wrangler r2 bucket create decdn-stats`, and `wrangler secret put RPC_URL`.
 
-When the contracts are redeployed, update `FEE_ROUTER` in [`worker/wrangler.jsonc`](worker/wrangler.jsonc) and `START_BLOCK` (the L2 block of the new FeeRouter) from `decdn/contracts/deployments/421614.json`. `stats.json` records the deployment it was built from, so the next tick notices the change and re-indexes from scratch — no manual bucket wipe.
+When the contracts are redeployed, update `FEE_ROUTER` and `START_BLOCK` in [`worker/wrangler.jsonc`](worker/wrangler.jsonc) (and `.env`). `FEE_ROUTER` comes from `decdn/contracts/deployments/421614.json`, but that file's `deployBlock` is an **L1** number — `START_BLOCK` must be the L2 block: take the FeeRouter creation tx's block from arbiscan, or the first L2 block whose `l1BlockNumber` ≥ `deployBlock`. `stats.json` records the deployment it was built from, so the next tick notices the change and re-indexes from scratch — no manual bucket wipe.
 
 ## Scripts
 
@@ -64,7 +64,7 @@ lib/mock.ts     the figures — typed exports standing in for on-chain reads
 
 Two rules explain most of the structure:
 
-- **Figures and copy are separated.** `lib/mock.ts` holds only values (`Metric`, `MetricPoint`, `Settlement`, `Region`, `RegionStats`). Headlines, labels, and prose are hardcoded in the block that renders them — so changing what the page *says* means editing that block, not the data file.
+- **Figures and copy are separated.** `lib/mock.ts` holds only values (`Metric`, `MetricPoint`, `Region`, `RegionStats`). Headlines, labels, and prose are hardcoded in the block that renders them — so changing what the page *says* means editing that block, not the data file.
 - **Blocks take no props and own no layout.** Each section is a zero-prop component that imports its own figures. `app/page.tsx` assembles them and owns all page-level layout (the `max-w-6xl` container, the metrics grid).
 
 The three metric cards are deliberately separate files rather than one parameterized component: each owns its own `ChartConfig`, gradient `id`, and Y-domain math. They are client components (`"use client"`) because of recharts; the rest are server components.
