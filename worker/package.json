@@ -7,6 +7,7 @@
     "dev": "wrangler dev --test-scheduled --env-file ../.env",
     "deploy": "wrangler deploy",
     "types": "wrangler types",
+    "pretypecheck": "wrangler types",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

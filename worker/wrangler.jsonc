@@ -8,9 +8,10 @@
   "vars": {
     "CHAIN_ID": "421614",
     "FEE_ROUTER": "0xe0510f9350ef9D34E576ccf4d9043f1FC30cf17D",
+    "START_BLOCK": "310903026",
     "LOG_CHUNK_BLOCKS": "10000",
     "MAX_CHUNKS_PER_RUN": "20",
-    "CONFIRMATIONS": "32"
+    "CONFIRMATIONS": "1200"
   },
   "observability": { "enabled": true }
 }

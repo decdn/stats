@@ -11,16 +11,28 @@ const httpMetadata = {
 
 // Where stats.json lives. The R2 *binding* is the default (prod, and the
 // locally emulated bucket under `wrangler dev`). When S3 credentials are set
-// the same bucket is reached over R2's S3 API instead, so a local run can
+// the same bucket (assuming `R2_BUCKET` matches wrangler.jsonc's
+// `bucket_name`) is reached over R2's S3 API instead, so a local run can
 // read/write the real bucket without `wrangler dev --remote`.
 export type StatsStore = {
   label: string
   get(): Promise<string | null>
   put(body: string): Promise<void>
+  // Copies the current stats.json to a recovery key before a destructive
+  // rewrite (deployment reset). A missing source is a no-op.
+  backup(): Promise<void>
 }
 
+export const BACKUP_KEY = "stats.json.pre-reindex"
+
 export function statsStore(env: Env): StatsStore {
-  return env.R2_ACCESS_KEY_ID ? s3Store(env) : bindingStore(env.STATS)
+  if (env.R2_ACCESS_KEY_ID) return s3Store(env)
+  if (!env.STATS) {
+    throw new Error(
+      "R2 binding STATS is missing and no R2_* S3 credentials are set"
+    )
+  }
+  return bindingStore(env.STATS)
 }
 
 function bindingStore(bucket: R2Bucket): StatsStore {
@@ -32,6 +44,10 @@ function bindingStore(bucket: R2Bucket): StatsStore {
     },
     async put(body) {
       await bucket.put(STATS_KEY, body, { httpMetadata })
+    },
+    async backup() {
+      const object = await bucket.get(STATS_KEY)
+      if (object) await bucket.put(BACKUP_KEY, await object.text())
     },
   }
 }
@@ -51,7 +67,8 @@ function s3Store(env: Env): StatsStore {
     service: "s3",
     region: "auto",
   })
-  const url = `${env.R2_S3_ENDPOINT!.replace(/\/$/, "")}/${env.R2_BUCKET}/${STATS_KEY}`
+  const base = `${env.R2_S3_ENDPOINT!.replace(/\/$/, "")}/${env.R2_BUCKET}`
+  const url = `${base}/${STATS_KEY}`
   return {
     label: `s3 ${env.R2_BUCKET}`,
     async get() {
@@ -76,6 +93,15 @@ function s3Store(env: Env): StatsStore {
       })
       if (!res.ok)
         throw new Error(`s3 put failed: ${res.status} ${await res.text()}`)
+    },
+    async backup() {
+      const res = await client.fetch(`${base}/${BACKUP_KEY}`, {
+        method: "PUT",
+        headers: { "x-amz-copy-source": `/${env.R2_BUCKET}/${STATS_KEY}` },
+      })
+      // 404 = nothing to back up; anything else must not be swallowed.
+      if (!res.ok && res.status !== 404)
+        throw new Error(`s3 backup failed: ${res.status} ${await res.text()}`)
     },
   }
 }

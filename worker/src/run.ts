@@ -47,14 +47,19 @@ export async function runIndex(env: Env) {
     (stats.feeRouter !== fresh.feeRouter ||
       stats.startBlock !== fresh.startBlock)
   ) {
-    // Contracts were redeployed: the old file describes a dead FeeRouter.
+    // Config names a different deployment (address or start block): the old
+    // file can't be extended, so re-index. Keep a copy first — this path can
+    // also be reached by a config typo, and the history has no other copy.
+    await store.backup()
     console.log(
-      `deployment changed (${stats.feeRouter ?? "?"}@${stats.startBlock ?? "?"} → ${fresh.feeRouter}@${fresh.startBlock}); re-indexing from scratch`
+      `deployment changed (${stats.feeRouter ?? "?"}@${stats.startBlock ?? "?"} → ${fresh.feeRouter}@${fresh.startBlock}); old file backed up; re-indexing from scratch`
     )
     stats = fresh
   }
 
   const head = await client.getBlockNumber()
+  // Stay behind the reorg/replica-lag window: logs are only fetched once, so
+  // never index blocks the RPC might still be catching up on or reorg away.
   const target = head - config.confirmations
   const from = BigInt(stats.lastBlock) + 1n
   const cap = from + config.logChunkBlocks * BigInt(config.maxChunksPerRun) - 1n

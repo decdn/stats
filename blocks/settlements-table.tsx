@@ -15,10 +15,12 @@ import {
 } from "@/lib/utils"
 
 const explorerTxUrl = "https://sepolia.arbiscan.io/tx/"
-// stats.json carries the last 50; the page shows the newest few.
+// stats.json carries the newest RECENT_SETTLEMENTS rows (worker/src/stats.ts);
+// the page shows the newest few.
 const visibleRows = 12
 
 type Row = {
+  key: string
   time: string
   operator: string
   bytes: string
@@ -27,27 +29,50 @@ type Row = {
   href: string
 }
 
+type TableData = {
+  rows: Row[]
+  // Distinguishes the honest empty states: live data not wired up vs an
+  // indexed chain with no settlements (yet).
+  emptyLabel: string
+  updatedAt: number | null
+}
+
 // Every row here is a real Settled log or the table stays empty — there is
 // deliberately no mock fallback, because a plausible-looking fake settlement
 // is the one thing this section must never render.
-async function loadSettlements(): Promise<Row[]> {
-  const stats = await getStats()
-  if (!stats) return []
-  return stats.settlements.slice(0, visibleRows).map((row) => ({
-    time: formatUtcTime(row.timestamp),
-    operator: truncateHex(row.operator),
-    bytes: formatBytes(Number(row.bytesDelivered)),
-    value: formatUsdc(row.amount),
-    tx: truncateHex(row.txHash, 8),
-    href: `${explorerTxUrl}${row.txHash}`,
-  }))
+async function loadSettlements(): Promise<TableData> {
+  const result = await getStats()
+  if (result.status === "unconfigured") {
+    return { rows: [], emptyLabel: "live data not configured", updatedAt: null }
+  }
+  if (result.status === "unindexed") {
+    return {
+      rows: [],
+      emptyLabel: "no settlements indexed yet",
+      updatedAt: null,
+    }
+  }
+  const { stats } = result
+  return {
+    rows: stats.settlements.slice(0, visibleRows).map((row) => ({
+      key: `${row.txHash}:${row.logIndex}`,
+      time: formatUtcTime(row.timestamp),
+      operator: truncateHex(row.operator),
+      bytes: formatBytes(Number(row.bytesDelivered)),
+      value: formatUsdc(row.amount),
+      tx: truncateHex(row.txHash, 8),
+      href: `${explorerTxUrl}${row.txHash}`,
+    })),
+    emptyLabel: "no settlements indexed yet",
+    updatedAt: Date.parse(stats.updatedAt),
+  }
 }
 
 const headClassName =
   "font-mono text-[10px] tracking-wide text-muted-foreground uppercase sm:text-[11px] sm:tracking-widest"
 
 export async function SettlementsTable() {
-  const settlements = await loadSettlements()
+  const { rows: settlements, emptyLabel, updatedAt } = await loadSettlements()
   return (
     <section className="flex w-full flex-col gap-5">
       <div>
@@ -81,12 +106,12 @@ export async function SettlementsTable() {
                 colSpan={5}
                 className="py-8 text-center text-muted-foreground lowercase"
               >
-                no settlements indexed yet
+                {emptyLabel}
               </TableCell>
             </TableRow>
           )}
           {settlements.map((settlement) => (
-            <TableRow key={settlement.tx}>
+            <TableRow key={settlement.key}>
               <TableCell className="text-muted-foreground tabular-nums">
                 {settlement.time}
               </TableCell>
@@ -112,6 +137,11 @@ export async function SettlementsTable() {
           ))}
         </TableBody>
       </Table>
+      {updatedAt !== null && (
+        <p className="font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
+          last indexed {formatUtcTime(updatedAt / 1000)} utc
+        </p>
+      )}
     </section>
   )
 }

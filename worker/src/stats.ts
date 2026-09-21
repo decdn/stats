@@ -53,6 +53,8 @@ export function emptyStats(
     feeRouter,
     startBlock,
     updatedAt: new Date(0).toISOString(),
+    // One before the first block to index, so `from = lastBlock + 1` is
+    // uniformly correct with no first-run special case.
     lastBlock: startBlock - 1,
     totals: { valueSettled: "0", bytesServed: "0", settlementCount: 0 },
     daily: [],
@@ -64,6 +66,13 @@ export function parseStats(json: string): Stats {
   const stats = JSON.parse(json) as Stats
   if (stats.version !== 1) {
     throw new Error(`unsupported stats.json version ${String(stats.version)}`)
+  }
+  if (
+    !Array.isArray(stats.daily) ||
+    !Array.isArray(stats.settlements) ||
+    typeof stats.lastBlock !== "number"
+  ) {
+    throw new Error("stats.json is malformed")
   }
   return stats
 }
@@ -84,8 +93,10 @@ function addDays(date: string, days: number) {
 function dailyPoint(stats: Stats, date: string): DailyPoint {
   const last = stats.daily.at(-1)
   if (last && date < last.date) {
-    // Events arrive in block order, so a date before the newest bucket is a
-    // day we already closed. Fill into it rather than reordering.
+    // Events arrive in block order, so this only happens when trimStats
+    // zero-filled the series up to "today" and an event mined just before
+    // midnight UTC lands afterwards. Fill into the existing bucket; with
+    // 92-day retention it cannot have been trimmed already.
     const found = stats.daily.find((point) => point.date === date)
     if (!found) throw new Error(`no daily bucket for ${date}`)
     return found
@@ -118,6 +129,11 @@ function add(a: string, b: string) {
 
 // Folds settled events (ascending block/log order) into totals, day buckets
 // and the recent list. Mutates and returns `stats`.
+//
+// The `seen` set is best-effort belt-and-braces: it only covers the retained
+// RECENT_SETTLEMENTS rows. Idempotency actually rests on indexed ranges never
+// overlapping (`from = lastBlock + 1`, single write per run) — never move
+// `lastBlock` backward without also resetting totals.
 export function applyEvents(stats: Stats, events: SettlementRow[]) {
   const seen = new Set(
     stats.settlements.map((row) => `${row.txHash}:${row.logIndex}`)

@@ -23,7 +23,8 @@ export async function indexSettled(
       strict: true,
     })
     const blockNumbers = [...new Set(logs.map((log) => log.blockNumber))]
-    // With `batch: true` on the transport these fold into one JSON-RPC call.
+    // With `batch: true` on the transport these coalesce into a single HTTP
+    // request (a JSON-RPC batch, up to viem's batchSize per request).
     const blocks = await Promise.all(
       blockNumbers.map((blockNumber) => client.getBlock({ blockNumber }))
     )
@@ -31,11 +32,17 @@ export async function indexSettled(
       blocks.map((block) => [block.number, Number(block.timestamp)])
     )
     for (const log of logs) {
+      const timestamp = timestamps.get(log.blockNumber)
+      if (timestamp === undefined) {
+        throw new Error(
+          `no timestamp for block ${log.blockNumber} (tx ${log.transactionHash})`
+        )
+      }
       rows.push({
         txHash: log.transactionHash,
         logIndex: log.logIndex,
         blockNumber: Number(log.blockNumber),
-        timestamp: timestamps.get(log.blockNumber)!,
+        timestamp,
         operator: log.args.operator,
         bytesDelivered: log.args.bytesDelivered.toString(),
         amount: log.args.amount.toString(),
