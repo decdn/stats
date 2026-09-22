@@ -1,0 +1,21 @@
+{
+  "name": "@decdn/stats-worker",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --test-scheduled --env-file ../.env",
+    "deploy": "wrangler deploy",
+    "types": "wrangler types",
+    "pretypecheck": "wrangler types",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "aws4fetch": "^1.0.20",
+    "viem": "^2.56.8"
+  },
+  "devDependencies": {
+    "typescript": "^5",
+    "wrangler": "^4.135.0"
+  }
+}
