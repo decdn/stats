@@ -1,7 +1,4 @@
-"use client"
-
-import { Area, AreaChart, XAxis, YAxis } from "recharts"
-
+import { BytesServedChart } from "@/blocks/metric-bytes-served-chart"
 import {
   Card,
   CardAction,
@@ -10,33 +7,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from "@/components/ui/chart"
-import { bytesServedMetric } from "@/lib/mock"
+import { loadMetric, bytesServedMetric } from "@/lib/metrics"
+import { cn } from "@/lib/utils"
 
-const chartConfig = {
-  value: {
-    label: "bytes served",
-    color: "var(--accent-green)",
-  },
-} satisfies ChartConfig
-
-const lastIndex = bytesServedMetric.series.length - 1
-
-const values = bytesServedMetric.series.map((point) => point.value)
-const minValue = Math.min(...values)
-const maxValue = Math.max(...values)
-const spread = maxValue - minValue || 1
-const yDomain: [number, number] = [
-  minValue - spread * 0.8,
-  maxValue + spread * 0.2,
-]
-
-export function MetricBytesServed() {
+export async function MetricBytesServed() {
+  const view = await loadMetric(bytesServedMetric)
+  const { metric } = view
   return (
     <Card>
       <CardHeader>
@@ -53,73 +29,37 @@ export function MetricBytesServed() {
       <CardContent>
         <div className="flex items-baseline gap-1.5">
           <span className="font-mono text-5xl tracking-tight tabular-nums md:text-6xl">
-            {bytesServedMetric.value}
+            {metric?.value ?? "—"}
           </span>
-          <span className="font-mono text-xl text-muted-foreground">
-            {bytesServedMetric.unit}
-          </span>
+          {metric?.unit && (
+            <span className="font-mono text-xl text-muted-foreground">
+              {metric.unit}
+            </span>
+          )}
         </div>
         <p className="text-sm text-muted-foreground">
           summed from settlement logs
         </p>
-        <p className="text-sm">
-          <span className="font-mono text-accent-green">
-            {bytesServedMetric.delta}
-          </span>{" "}
-          <span className="text-muted-foreground">in the last 24h</span>
-        </p>
-        <ChartContainer
-          config={chartConfig}
-          className="aspect-auto h-24 w-full"
-        >
-          <AreaChart
-            accessibilityLayer
-            data={bytesServedMetric.series}
-            margin={{ left: 4, right: 6, top: 6, bottom: 0 }}
-          >
-            <XAxis dataKey="t" hide />
-            <YAxis hide domain={yDomain} />
-            <ChartTooltip
-              cursor={false}
-              content={<ChartTooltipContent indicator="line" />}
-            />
-            <defs>
-              <linearGradient id="fillBytesServed" x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="5%"
-                  stopColor="var(--color-value)"
-                  stopOpacity={0.8}
-                />
-                <stop
-                  offset="95%"
-                  stopColor="var(--color-value)"
-                  stopOpacity={0.05}
-                />
-              </linearGradient>
-            </defs>
-            <Area
-              dataKey="value"
-              type="natural"
-              fill="url(#fillBytesServed)"
-              stroke="var(--color-value)"
-              strokeWidth={1.5}
-              isAnimationActive={false}
-              dot={(props: { cx?: number; cy?: number; index?: number }) =>
-                props.index === lastIndex ? (
-                  <circle
-                    key="last-point"
-                    cx={props.cx}
-                    cy={props.cy}
-                    r={3}
-                    fill="var(--color-value)"
-                  />
-                ) : (
-                  <g key={`empty-${props.index}`} />
-                )
-              }
-            />
-          </AreaChart>
-        </ChartContainer>
+        {metric?.delta && (
+          <p className="text-sm">
+            <span
+              className={cn(
+                "font-mono",
+                metric.delta.up ? "text-accent-green" : "text-muted-foreground"
+              )}
+            >
+              {metric.delta.text}
+            </span>{" "}
+            <span className="text-muted-foreground">in the last 24h</span>
+          </p>
+        )}
+        {metric ? (
+          <BytesServedChart series={metric.series} />
+        ) : (
+          <p className="flex h-24 items-center justify-center font-mono text-xs text-muted-foreground lowercase">
+            {view.emptyLabel}
+          </p>
+        )}
       </CardContent>
       <CardFooter>
         <p className="font-mono text-[11px]">

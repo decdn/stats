@@ -1,7 +1,4 @@
-"use client"
-
-import { Area, AreaChart, XAxis, YAxis } from "recharts"
-
+import { ValueSettledChart } from "@/blocks/metric-value-settled-chart"
 import {
   Card,
   CardAction,
@@ -10,33 +7,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from "@/components/ui/chart"
-import { valueSettledMetric } from "@/lib/mock"
+import { loadMetric, valueSettledMetric } from "@/lib/metrics"
+import { cn } from "@/lib/utils"
 
-const chartConfig = {
-  value: {
-    label: "value settled",
-    color: "var(--accent-green)",
-  },
-} satisfies ChartConfig
-
-const lastIndex = valueSettledMetric.series.length - 1
-
-const values = valueSettledMetric.series.map((point) => point.value)
-const minValue = Math.min(...values)
-const maxValue = Math.max(...values)
-const spread = maxValue - minValue || 1
-const yDomain: [number, number] = [
-  minValue - spread * 0.8,
-  maxValue + spread * 0.2,
-]
-
-export function MetricValueSettled() {
+export async function MetricValueSettled() {
+  const view = await loadMetric(valueSettledMetric)
+  const { metric } = view
   return (
     <Card>
       <CardHeader>
@@ -53,70 +29,32 @@ export function MetricValueSettled() {
       <CardContent>
         <div className="flex items-baseline gap-1.5">
           <span className="font-mono text-5xl tracking-tight tabular-nums md:text-6xl">
-            {valueSettledMetric.value}
+            {metric?.value ?? "—"}
           </span>
         </div>
         <p className="text-sm text-muted-foreground">
           testnet-usdc · 6-decimal base units
         </p>
-        <p className="text-sm">
-          <span className="font-mono text-accent-green">
-            {valueSettledMetric.delta}
-          </span>{" "}
-          <span className="text-muted-foreground">in the last 24h</span>
-        </p>
-        <ChartContainer
-          config={chartConfig}
-          className="aspect-auto h-24 w-full"
-        >
-          <AreaChart
-            accessibilityLayer
-            data={valueSettledMetric.series}
-            margin={{ left: 4, right: 6, top: 6, bottom: 0 }}
-          >
-            <XAxis dataKey="t" hide />
-            <YAxis hide domain={yDomain} />
-            <ChartTooltip
-              cursor={false}
-              content={<ChartTooltipContent indicator="line" />}
-            />
-            <defs>
-              <linearGradient id="fillValueSettled" x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="5%"
-                  stopColor="var(--color-value)"
-                  stopOpacity={0.8}
-                />
-                <stop
-                  offset="95%"
-                  stopColor="var(--color-value)"
-                  stopOpacity={0.05}
-                />
-              </linearGradient>
-            </defs>
-            <Area
-              dataKey="value"
-              type="natural"
-              fill="url(#fillValueSettled)"
-              stroke="var(--color-value)"
-              strokeWidth={1.5}
-              isAnimationActive={false}
-              dot={(props: { cx?: number; cy?: number; index?: number }) =>
-                props.index === lastIndex ? (
-                  <circle
-                    key="last-point"
-                    cx={props.cx}
-                    cy={props.cy}
-                    r={3}
-                    fill="var(--color-value)"
-                  />
-                ) : (
-                  <g key={`empty-${props.index}`} />
-                )
-              }
-            />
-          </AreaChart>
-        </ChartContainer>
+        {metric?.delta && (
+          <p className="text-sm">
+            <span
+              className={cn(
+                "font-mono",
+                metric.delta.up ? "text-accent-green" : "text-muted-foreground"
+              )}
+            >
+              {metric.delta.text}
+            </span>{" "}
+            <span className="text-muted-foreground">in the last 24h</span>
+          </p>
+        )}
+        {metric ? (
+          <ValueSettledChart series={metric.series} />
+        ) : (
+          <p className="flex h-24 items-center justify-center font-mono text-xs text-muted-foreground lowercase">
+            {view.emptyLabel}
+          </p>
+        )}
       </CardContent>
       <CardFooter>
         <p className="font-mono text-[11px]">

@@ -1,6 +1,13 @@
+import { cache } from "react"
+
 import type { Stats } from "@/worker/src/stats"
 
-export type { DailyPoint, SettlementRow, Stats } from "@/worker/src/stats"
+export type {
+  DailyPoint,
+  HourlyPoint,
+  SettlementRow,
+  Stats,
+} from "@/worker/src/stats"
 
 export type StatsResult =
   | { status: "ok"; stats: Stats }
@@ -12,11 +19,13 @@ export type StatsResult =
   | { status: "unindexed" }
 
 // Reads the stats.json the worker writes to R2. Throws on 5xx and other
-// failures so ISR keeps serving the last successfully rendered page.
-export async function getStats(): Promise<StatsResult> {
+// failures so ISR keeps serving the last successfully rendered page. Every
+// block that shows live data calls this; `cache` makes it one fetch and one
+// parse per render.
+export const getStats = cache(async (): Promise<StatsResult> => {
   const url = process.env.STATS_URL
   if (!url) {
-    console.warn("STATS_URL unset — settlements table renders unconfigured")
+    console.warn("STATS_URL unset — live sections render unconfigured")
     return { status: "unconfigured" }
   }
   const res = await fetch(url, { next: { revalidate: 60 } })
@@ -27,8 +36,10 @@ export async function getStats(): Promise<StatsResult> {
     )
   }
   const stats = (await res.json()) as Stats
-  if (stats.version !== 1) {
+  // A file from an older worker (mid-cutover, before the re-index lands)
+  // throws too, keeping the last good page up.
+  if (stats.version !== 2) {
     throw new Error(`unsupported stats.json version ${String(stats.version)}`)
   }
   return { status: "ok", stats }
-}
+})

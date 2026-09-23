@@ -2,13 +2,14 @@ import { createPublicClient, http } from "viem"
 
 import { parseConfig, type Env } from "./env"
 import { indexSettled } from "./indexer"
+import { countActiveNodes } from "./nodes"
 import {
   applyEvents,
   emptyStats,
   parseStats,
+  recordActiveNodes,
   serializeStats,
   trimStats,
-  utcDate,
   type Hex,
 } from "./stats"
 import { statsStore } from "./store"
@@ -36,23 +37,31 @@ export async function runIndex(env: Env) {
     Number(config.startBlock)
   )
   const existing = await store.get()
-  let stats = existing ? parseStats(existing) : fresh
-  if (existing && stats.chainId !== config.chainId) {
+  const parsed = existing === null ? null : parseStats(existing)
+  let stats = parsed ?? fresh
+  if (parsed && parsed.chainId !== config.chainId) {
     throw new Error(
-      `stats.json is for chain ${stats.chainId}, worker is configured for ${config.chainId}`
+      `stats.json is for chain ${parsed.chainId}, worker is configured for ${config.chainId}`
     )
   }
-  if (
-    existing &&
-    (stats.feeRouter !== fresh.feeRouter ||
-      stats.startBlock !== fresh.startBlock)
+  if (existing !== null && parsed === null) {
+    // Written under an older schema; its history lacks the buckets this
+    // version keeps, so rebuild it. Back up first, as below.
+    await store.backup()
+    console.log(
+      "stats.json schema is outdated; old file backed up; re-indexing from scratch"
+    )
+  } else if (
+    parsed &&
+    (parsed.feeRouter !== fresh.feeRouter ||
+      parsed.startBlock !== fresh.startBlock)
   ) {
     // Config names a different deployment (address or start block): the old
     // file can't be extended, so re-index. Keep a copy first — this path can
     // also be reached by a config typo, and the history has no other copy.
     await store.backup()
     console.log(
-      `deployment changed (${stats.feeRouter ?? "?"}@${stats.startBlock ?? "?"} → ${fresh.feeRouter}@${fresh.startBlock}); old file backed up; re-indexing from scratch`
+      `deployment changed (${parsed.feeRouter ?? "?"}@${parsed.startBlock ?? "?"} → ${fresh.feeRouter}@${fresh.startBlock}); old file backed up; re-indexing from scratch`
     )
     stats = fresh
   }
@@ -78,7 +87,19 @@ export async function runIndex(env: Env) {
   }
 
   const caughtUp = BigInt(stats.lastBlock) >= target
-  trimStats(stats, caughtUp ? utcDate(Date.now() / 1000) : undefined)
+  const now = Date.now() / 1000
+  if (caughtUp) {
+    // Node count history can't be rebuilt from logs, so it's sampled live.
+    // Only once caught up: mid-backfill the hourly series still ends in the
+    // past, and a sample at "now" would zero-fill over hours yet to be indexed.
+    const activeNodes = await countActiveNodes(
+      client,
+      config.capacityBond,
+      head
+    )
+    recordActiveNodes(stats, now, activeNodes)
+  }
+  trimStats(stats, caughtUp ? now : undefined)
   stats.updatedAt = new Date().toISOString()
 
   await store.put(serializeStats(stats))
