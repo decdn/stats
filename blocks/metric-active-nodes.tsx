@@ -7,12 +7,26 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { loadMetric, activeNodesMetric } from "@/lib/metrics"
-import { cn } from "@/lib/utils"
+import { loadMetric, activeNodesMetric, type MetricView } from "@/lib/metrics"
+import { cn, formatUtcTime } from "@/lib/utils"
+
+function emptyLabel(view: MetricView) {
+  switch (view.status) {
+    case "unconfigured":
+      return "live data not configured"
+    case "catching-up":
+      return `catching up · block ${view.lastBlock}`
+    case "unsampled":
+      return "not sampled yet"
+    default:
+      return "not indexed yet"
+  }
+}
 
 export async function MetricActiveNodes() {
   const view = await loadMetric(activeNodesMetric)
-  const { metric } = view
+  const metric = view.status === "ok" ? view.metric : null
+  const staleSince = view.status === "ok" ? view.staleSince : null
   return (
     <Card>
       <CardHeader>
@@ -33,7 +47,7 @@ export async function MetricActiveNodes() {
           </span>
         </div>
         <p className="text-sm text-muted-foreground">bonded &amp; serving</p>
-        {metric?.delta && (
+        {metric?.delta && staleSince === null && (
           <p className="text-sm">
             <span
               className={cn(
@@ -46,11 +60,16 @@ export async function MetricActiveNodes() {
             <span className="text-muted-foreground">in the last 24h</span>
           </p>
         )}
+        {staleSince !== null && (
+          <p className="text-sm text-muted-foreground">
+            as of {formatUtcTime(staleSince)} utc
+          </p>
+        )}
         {metric ? (
           <ActiveNodesChart series={metric.series} />
         ) : (
           <p className="flex h-24 items-center justify-center font-mono text-xs text-muted-foreground lowercase">
-            {view.emptyLabel}
+            {emptyLabel(view)}
           </p>
         )}
       </CardContent>

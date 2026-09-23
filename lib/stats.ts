@@ -11,8 +11,8 @@ export type {
 
 export type StatsResult =
   | { status: "ok"; stats: Stats }
-  // STATS_URL is unset — a cold checkout. The page renders, but the
-  // settlements table must say "not configured", never a fake empty chain.
+  // STATS_URL is unset — a cold checkout. The page renders, but the live
+  // sections must say "not configured", never a fake empty chain.
   | { status: "unconfigured" }
   // The worker answered 404: the bucket has no stats.json yet (pre-first-tick
   // bootstrap). An expected state, distinct from a broken fetch.
@@ -36,8 +36,9 @@ export const getStats = cache(async (): Promise<StatsResult> => {
     )
   }
   const stats = (await res.json()) as Stats
-  // A file from an older worker (mid-cutover, before the re-index lands)
-  // throws too, keeping the last good page up.
+  // An unknown version (e.g. an old worker's file, before the new worker's
+  // first tick) throws too: a live deployment keeps serving its last good
+  // render, but a build against it fails.
   if (stats.version !== 2) {
     throw new Error(`unsupported stats.json version ${String(stats.version)}`)
   }

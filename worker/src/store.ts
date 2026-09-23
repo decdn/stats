@@ -19,7 +19,7 @@ export type StatsStore = {
   get(): Promise<string | null>
   put(body: string): Promise<void>
   // Copies the current stats.json to a recovery key before a destructive
-  // rewrite (deployment reset). A missing source is a no-op.
+  // rewrite (deployment or schema reset). A missing source is a no-op.
   backup(): Promise<void>
 }
 

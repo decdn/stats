@@ -43,11 +43,18 @@ export type Stats = {
   version: typeof STATS_VERSION
   chainId: number
   // The deployment this file was built from. A run whose config names a
-  // different contract or start block discards the file and re-indexes.
+  // different FeeRouter or start block discards the file and re-indexes.
   feeRouter: Hex
   startBlock: number
+  // Where `hourly[].activeNodes` samples come from. A different CapacityBond
+  // only clears those samples; settlements don't depend on it.
+  capacityBond: Hex
   updatedAt: string
   lastBlock: number
+  // Whether `lastBlock` reached the confirmed head on the last run. While
+  // false (first backfill, re-index, recovery from an outage) totals are
+  // partial and the hourly series ends in the past, so nothing here is "now".
+  caughtUp: boolean
   totals: {
     valueSettled: string
     bytesServed: string
@@ -61,17 +68,20 @@ export type Stats = {
 export function emptyStats(
   chainId: number,
   feeRouter: Hex,
-  startBlock: number
+  startBlock: number,
+  capacityBond: Hex
 ): Stats {
   return {
     version: STATS_VERSION,
     chainId,
     feeRouter,
     startBlock,
+    capacityBond,
     updatedAt: new Date(0).toISOString(),
     // One before the first block to index, so `from = lastBlock + 1` is
     // uniformly correct with no first-run special case.
     lastBlock: startBlock - 1,
+    caughtUp: false,
     totals: { valueSettled: "0", bytesServed: "0", settlementCount: 0 },
     daily: [],
     hourly: [],
@@ -79,13 +89,24 @@ export function emptyStats(
   }
 }
 
-// Returns null for a file written under an older schema: it can't be
-// migrated in place (hourly buckets don't exist for the history it already
-// folded), so the caller re-indexes.
-export function parseStats(json: string): Stats | null {
-  const stats = JSON.parse(json) as Stats
+export type ParsedStats =
+  | { status: "ok"; stats: Stats }
+  // Written under an older schema. It can't be migrated in place (its folded
+  // history lacks whatever the current version tracks), so the caller
+  // re-indexes — after checking it's for the configured chain.
+  | { status: "outdated"; version: number; chainId: number }
+
+export function parseStats(json: string): ParsedStats {
+  const stats = JSON.parse(json) as Stats | null
+  if (!stats || typeof stats !== "object") {
+    throw new Error("stats.json is malformed")
+  }
   if (typeof stats.version === "number" && stats.version < STATS_VERSION) {
-    return null
+    return {
+      status: "outdated",
+      version: stats.version,
+      chainId: stats.chainId,
+    }
   }
   if (stats.version !== STATS_VERSION) {
     throw new Error(`unsupported stats.json version ${String(stats.version)}`)
@@ -94,11 +115,13 @@ export function parseStats(json: string): Stats | null {
     !Array.isArray(stats.daily) ||
     !Array.isArray(stats.hourly) ||
     !Array.isArray(stats.settlements) ||
-    typeof stats.lastBlock !== "number"
+    typeof stats.lastBlock !== "number" ||
+    typeof stats.caughtUp !== "boolean" ||
+    typeof stats.capacityBond !== "string"
   ) {
     throw new Error("stats.json is malformed")
   }
-  return stats
+  return { status: "ok", stats }
 }
 
 export function serializeStats(stats: Stats) {
@@ -114,7 +137,7 @@ export function utcHour(timestamp: number) {
 }
 
 // How a bucketed series is keyed and stepped. Keys are ISO prefixes, so
-// string order is time order.
+// string order is time order; `next(k) > k` and `key(empty(k)) === k`.
 type Buckets<P> = {
   key: (point: P) => string
   next: (key: string) => string
@@ -144,20 +167,38 @@ const hours: Buckets<HourlyPoint> = {
   }),
 }
 
+// Returns the bucket for `key`, creating it and zero-filling any gap so the
+// series stays contiguous (one bucket per step, no holes).
 function bucket<P>(points: P[], buckets: Buckets<P>, key: string): P {
+  const first = points.at(0)
   const last = points.at(-1)
-  if (last && key < buckets.key(last)) {
-    // Events arrive in block order, so this only happens when a caught-up run
-    // zero-filled (trimStats) or sampled (recordActiveNodes) up to "now" and
-    // an event mined just before the bucket boundary lands afterwards. Fill into the existing bucket; the
-    // indexer trails the head by minutes, far inside either retention window.
+  if (!first || !last) {
+    const point = buckets.empty(key)
+    points.push(point)
+    return point
+  }
+  if (key < buckets.key(first)) {
+    // Before the series start. Events arrive in block order, so this only
+    // happens when a caught-up run sampled nodes into an empty series
+    // (recordActiveNodes) and an event mined up to CONFIRMATIONS blocks
+    // (~5 min) plus a cron interval earlier lands on the next run.
+    const front: P[] = []
+    for (let cursor = key; cursor < buckets.key(first);) {
+      front.push(buckets.empty(cursor))
+      cursor = buckets.next(cursor)
+    }
+    points.unshift(...front)
+    return front[0]
+  }
+  if (key <= buckets.key(last)) {
+    // Inside the series: a caught-up run zero-filled (trimStats) or sampled
+    // up to "now" and an event from just before that lands afterwards, as
+    // above. The series is contiguous, so the bucket exists.
     const found = points.find((point) => buckets.key(point) === key)
-    if (!found) throw new Error(`no bucket for ${key}`)
+    if (!found) throw new Error(`no bucket for ${key} in a contiguous series`)
     return found
   }
-  if (last && buckets.key(last) === key) return last
-  // Zero-fill the gap so the series stays contiguous.
-  let cursor = last ? buckets.next(buckets.key(last)) : key
+  let cursor = buckets.next(buckets.key(last))
   while (cursor < key) {
     points.push(buckets.empty(cursor))
     cursor = buckets.next(cursor)
@@ -171,8 +212,8 @@ function add(a: string, b: string) {
   return (BigInt(a) + BigInt(b)).toString()
 }
 
-// Folds settled events (ascending block/log order) into totals, day buckets
-// and the recent list. Mutates and returns `stats`.
+// Folds settled events (ascending block/log order) into totals, daily and
+// hourly buckets, and the recent list. Mutates and returns `stats`.
 //
 // The `seen` set is best-effort belt-and-braces: it only covers the retained
 // RECENT_SETTLEMENTS rows. Idempotency actually rests on indexed ranges never
@@ -213,6 +254,14 @@ export function applyEvents(stats: Stats, events: SettlementRow[]) {
 // sample of its hour.
 export function recordActiveNodes(stats: Stats, now: number, count: number) {
   bucket(stats.hourly, hours, utcHour(now)).activeNodes = count
+  return stats
+}
+
+// Switches the active-node source to another CapacityBond. Samples from the
+// old contract are dropped so the 24h delta never spans two contracts.
+export function resetActiveNodes(stats: Stats, capacityBond: Hex) {
+  for (const point of stats.hourly) point.activeNodes = null
+  stats.capacityBond = capacityBond
   return stats
 }
 

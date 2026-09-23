@@ -2,7 +2,8 @@ export { cn } from "cn"
 
 const byteUnits = ["B", "KB", "MB", "GB", "TB", "PB"]
 
-// Raw byte count → value in the largest base-1000 unit that keeps it ≥ 1,
+// Raw byte count → value in the largest base-1000 unit (up to PB) that keeps
+// it ≥ 1,
 // plus the divisor so related figures can be put in the same unit.
 export function scaleBytes(bytes: number) {
   let value = bytes

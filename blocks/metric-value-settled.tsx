@@ -7,12 +7,24 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { loadMetric, valueSettledMetric } from "@/lib/metrics"
-import { cn } from "@/lib/utils"
+import { loadMetric, valueSettledMetric, type MetricView } from "@/lib/metrics"
+import { cn, formatUtcTime } from "@/lib/utils"
+
+function emptyLabel(view: MetricView) {
+  switch (view.status) {
+    case "unconfigured":
+      return "live data not configured"
+    case "catching-up":
+      return `catching up · block ${view.lastBlock}`
+    default:
+      return "no settlements indexed yet"
+  }
+}
 
 export async function MetricValueSettled() {
   const view = await loadMetric(valueSettledMetric)
-  const { metric } = view
+  const metric = view.status === "ok" ? view.metric : null
+  const staleSince = view.status === "ok" ? view.staleSince : null
   return (
     <Card>
       <CardHeader>
@@ -35,7 +47,7 @@ export async function MetricValueSettled() {
         <p className="text-sm text-muted-foreground">
           testnet-usdc · 6-decimal base units
         </p>
-        {metric?.delta && (
+        {metric?.delta && staleSince === null && (
           <p className="text-sm">
             <span
               className={cn(
@@ -48,11 +60,16 @@ export async function MetricValueSettled() {
             <span className="text-muted-foreground">in the last 24h</span>
           </p>
         )}
+        {staleSince !== null && (
+          <p className="text-sm text-muted-foreground">
+            as of {formatUtcTime(staleSince)} utc
+          </p>
+        )}
         {metric ? (
           <ValueSettledChart series={metric.series} />
         ) : (
           <p className="flex h-24 items-center justify-center font-mono text-xs text-muted-foreground lowercase">
-            {view.emptyLabel}
+            {emptyLabel(view)}
           </p>
         )}
       </CardContent>
