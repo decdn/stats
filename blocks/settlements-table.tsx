@@ -34,7 +34,7 @@ type TableData = {
   // Distinguishes the honest empty states: live data not wired up vs an
   // indexed chain with no settlements (yet).
   emptyLabel: string
-  updatedAt: number | null
+  footer: string | null
 }
 
 // Every row here is a real Settled log or the table stays empty — there is
@@ -43,13 +43,13 @@ type TableData = {
 async function loadSettlements(): Promise<TableData> {
   const result = await getStats()
   if (result.status === "unconfigured") {
-    return { rows: [], emptyLabel: "live data not configured", updatedAt: null }
+    return { rows: [], emptyLabel: "live data not configured", footer: null }
   }
   if (result.status === "unindexed") {
     return {
       rows: [],
       emptyLabel: "no settlements indexed yet",
-      updatedAt: null,
+      footer: null,
     }
   }
   const { stats } = result
@@ -64,7 +64,11 @@ async function loadSettlements(): Promise<TableData> {
       href: `${explorerTxUrl}${row.txHash}`,
     })),
     emptyLabel: "no settlements indexed yet",
-    updatedAt: Date.parse(stats.updatedAt),
+    // Mid-backfill the rows are real but not the newest, so say so rather
+    // than implying a fresh index.
+    footer: stats.caughtUp
+      ? `last indexed ${formatUtcTime(Date.parse(stats.updatedAt) / 1000)} utc`
+      : `re-indexing · block ${stats.lastBlock}`,
   }
 }
 
@@ -72,7 +76,7 @@ const headClassName =
   "font-mono text-[10px] tracking-wide text-muted-foreground uppercase sm:text-[11px] sm:tracking-widest"
 
 export async function SettlementsTable() {
-  const { rows: settlements, emptyLabel, updatedAt } = await loadSettlements()
+  const { rows: settlements, emptyLabel, footer } = await loadSettlements()
   return (
     <section className="flex w-full flex-col gap-5">
       <div>
@@ -137,9 +141,9 @@ export async function SettlementsTable() {
           ))}
         </TableBody>
       </Table>
-      {updatedAt !== null && (
+      {footer !== null && (
         <p className="font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
-          last indexed {formatUtcTime(updatedAt / 1000)} utc
+          {footer}
         </p>
       )}
     </section>

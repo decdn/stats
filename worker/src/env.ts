@@ -6,6 +6,7 @@ export type Env = {
   START_BLOCK: string
   CHAIN_ID: string
   FEE_ROUTER: string
+  CAPACITY_BOND: string
   LOG_CHUNK_BLOCKS: string
   MAX_CHUNKS_PER_RUN: string
   CONFIRMATIONS: string
@@ -21,6 +22,7 @@ export type Config = {
   startBlock: bigint
   chainId: number
   feeRouter: Address
+  capacityBond: Address
   logChunkBlocks: bigint
   maxChunksPerRun: number
   confirmations: bigint
@@ -47,11 +49,15 @@ export function parseConfig(env: Env): Config {
   if (!isAddress(env.FEE_ROUTER)) {
     throw new Error(`FEE_ROUTER is not an address: ${env.FEE_ROUTER}`)
   }
+  if (!isAddress(env.CAPACITY_BOND)) {
+    throw new Error(`CAPACITY_BOND is not an address: ${env.CAPACITY_BOND}`)
+  }
   return {
     rpcUrl: env.RPC_URL,
     startBlock: BigInt(int(env, "START_BLOCK")),
     chainId: Number(int(env, "CHAIN_ID")),
     feeRouter: env.FEE_ROUTER,
+    capacityBond: env.CAPACITY_BOND,
     logChunkBlocks: BigInt(positiveInt(env, "LOG_CHUNK_BLOCKS")),
     maxChunksPerRun: Number(positiveInt(env, "MAX_CHUNKS_PER_RUN")),
     confirmations: BigInt(int(env, "CONFIRMATIONS")),

@@ -1,7 +1,4 @@
-"use client"
-
-import { Area, AreaChart, XAxis, YAxis } from "recharts"
-
+import { ActiveNodesChart } from "@/blocks/charts/metric-active-nodes-chart"
 import {
   Card,
   CardAction,
@@ -10,33 +7,26 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from "@/components/ui/chart"
-import { activeNodesMetric } from "@/lib/mock"
+import { loadMetric, activeNodesMetric, type MetricView } from "@/lib/metrics"
+import { cn, formatUtcTime } from "@/lib/utils"
 
-const chartConfig = {
-  value: {
-    label: "active nodes",
-    color: "var(--accent-green)",
-  },
-} satisfies ChartConfig
+function emptyLabel(view: MetricView) {
+  switch (view.status) {
+    case "unconfigured":
+      return "live data not configured"
+    case "catching-up":
+      return `catching up · block ${view.lastBlock}`
+    case "unsampled":
+      return "not sampled yet"
+    default:
+      return "not indexed yet"
+  }
+}
 
-const lastIndex = activeNodesMetric.series.length - 1
-
-const values = activeNodesMetric.series.map((point) => point.value)
-const minValue = Math.min(...values)
-const maxValue = Math.max(...values)
-const spread = maxValue - minValue || 1
-const yDomain: [number, number] = [
-  minValue - spread * 0.8,
-  maxValue + spread * 0.2,
-]
-
-export function MetricActiveNodes() {
+export async function MetricActiveNodes() {
+  const view = await loadMetric(activeNodesMetric)
+  const metric = view.status === "ok" ? view.metric : null
+  const staleSince = view.status === "ok" ? view.staleSince : null
   return (
     <Card>
       <CardHeader>
@@ -53,74 +43,41 @@ export function MetricActiveNodes() {
       <CardContent>
         <div className="flex items-baseline gap-1.5">
           <span className="font-mono text-5xl tracking-tight tabular-nums md:text-6xl">
-            {activeNodesMetric.value}
+            {metric?.value ?? "—"}
           </span>
         </div>
         <p className="text-sm text-muted-foreground">bonded &amp; serving</p>
-        <p className="text-sm">
-          <span className="font-mono text-accent-green">
-            {activeNodesMetric.delta}
-          </span>{" "}
-          <span className="text-muted-foreground">in the last 24h</span>
-        </p>
-        <ChartContainer
-          config={chartConfig}
-          className="aspect-auto h-24 w-full"
-        >
-          <AreaChart
-            accessibilityLayer
-            data={activeNodesMetric.series}
-            margin={{ left: 4, right: 6, top: 6, bottom: 0 }}
-          >
-            <XAxis dataKey="t" hide />
-            <YAxis hide domain={yDomain} />
-            <ChartTooltip
-              cursor={false}
-              content={<ChartTooltipContent indicator="line" />}
-            />
-            <defs>
-              <linearGradient id="fillActiveNodes" x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="5%"
-                  stopColor="var(--color-value)"
-                  stopOpacity={0.8}
-                />
-                <stop
-                  offset="95%"
-                  stopColor="var(--color-value)"
-                  stopOpacity={0.05}
-                />
-              </linearGradient>
-            </defs>
-            <Area
-              dataKey="value"
-              type="natural"
-              fill="url(#fillActiveNodes)"
-              stroke="var(--color-value)"
-              strokeWidth={1.5}
-              isAnimationActive={false}
-              dot={(props: { cx?: number; cy?: number; index?: number }) =>
-                props.index === lastIndex ? (
-                  <circle
-                    key="last-point"
-                    cx={props.cx}
-                    cy={props.cy}
-                    r={3}
-                    fill="var(--color-value)"
-                  />
-                ) : (
-                  <g key={`empty-${props.index}`} />
-                )
-              }
-            />
-          </AreaChart>
-        </ChartContainer>
+        {metric?.delta && staleSince === null && (
+          <p className="text-sm">
+            <span
+              className={cn(
+                "font-mono",
+                metric.delta.up ? "text-accent-green" : "text-muted-foreground"
+              )}
+            >
+              {metric.delta.text}
+            </span>{" "}
+            <span className="text-muted-foreground">in the last 24h</span>
+          </p>
+        )}
+        {staleSince !== null && (
+          <p className="text-sm text-muted-foreground">
+            as of {formatUtcTime(staleSince)} utc
+          </p>
+        )}
+        {metric ? (
+          <ActiveNodesChart series={metric.series} />
+        ) : (
+          <p className="flex h-24 items-center justify-center font-mono text-xs text-muted-foreground lowercase">
+            {emptyLabel(view)}
+          </p>
+        )}
       </CardContent>
       <CardFooter>
         <p className="font-mono text-[11px]">
           <span className="text-muted-foreground/60">call</span>{" "}
           <span className="text-muted-foreground">
-            CapacityBond.getActiveNodeCount()
+            CapacityBond.getRegisteredNodes()
           </span>
         </p>
       </CardFooter>

@@ -4,7 +4,7 @@ A single-page status dashboard for the DeCDN network — value settled, bytes se
 
 Built with Next.js (App Router), React 19, Tailwind CSS v4, shadcn/ui, and recharts.
 
-> The settlements table is live: a Cloudflare Worker in [`worker/`](worker/) indexes `FeeRouter.Settled` logs on a cron and writes `stats.json` to R2, which the page reads at build/revalidate time. The metric cards and by-region table are still static stand-ins from [`lib/mock.ts`](lib/mock.ts).
+> The metric cards and settlements table are live: a Cloudflare Worker in [`worker/`](worker/) indexes `FeeRouter.Settled` logs and samples the `CapacityBond` active-node count on a cron, and writes `stats.json` to R2, which the page reads at build/revalidate time. The by-region table is still a static stand-in from [`lib/mock.ts`](lib/mock.ts).
 
 ## Getting started
 
@@ -15,7 +15,7 @@ pnpm install
 pnpm dev
 ```
 
-Then open http://localhost:3000. Without a `.env` the settlements table renders its empty state ("live data not configured"); the metric cards and by-region table are static mock data.
+Then open http://localhost:3000. Without a `.env` the metric cards and settlements table render their empty state ("live data not configured"); the by-region table is static mock data.
 
 ### Live on-chain data (local)
 
@@ -31,11 +31,11 @@ curl "http://localhost:8787/__scheduled?cron=*/10+*+*+*+*"
 curl http://localhost:8787/stats.json
 ```
 
-Each tick indexes at most `LOG_CHUNK_BLOCKS × MAX_CHUNKS_PER_RUN` blocks (see [`worker/wrangler.jsonc`](worker/wrangler.jsonc)) past `lastBlock`, so the first backfill takes a few ticks; pass `--var LOG_CHUNK_BLOCKS:1000000` to `wrangler dev` if your RPC allows wide `eth_getLogs` ranges. With `STATS_URL=http://localhost:8787/stats.json` in `.env`, `pnpm dev` renders the indexed rows.
+Each tick indexes at most `LOG_CHUNK_BLOCKS × MAX_CHUNKS_PER_RUN` blocks (see [`worker/wrangler.jsonc`](worker/wrangler.jsonc)) past `lastBlock`, so the first backfill takes a few ticks; pass `--var LOG_CHUNK_BLOCKS:1000000` to `wrangler dev` if your RPC allows wide `eth_getLogs` ranges. With `STATS_URL=http://localhost:8787/stats.json` in `.env`, `pnpm dev` renders the indexed data. Until the worker has caught up with the chain the metric cards read "catching up · block N" and the table footer "re-indexing". The active-node count is sampled on each caught-up tick (the last sample of each UTC hour is kept), so its sparkline fills in over the first day and its 24h change appears once there's a sample from 24h earlier.
 
 Deploy with `pnpm worker:deploy` after `wrangler login`, `wrangler r2 bucket create decdn-stats`, and `wrangler secret put RPC_URL`.
 
-When the contracts are redeployed, update `FEE_ROUTER` and `START_BLOCK` in [`worker/wrangler.jsonc`](worker/wrangler.jsonc) (and `.env`). `FEE_ROUTER` comes from `decdn/contracts/deployments/421614.json`, but that file's `deployBlock` is an **L1** number — `START_BLOCK` must be the L2 block: take the FeeRouter creation tx's block from arbiscan, or the first L2 block whose `l1BlockNumber` ≥ `deployBlock`. `stats.json` records the deployment it was built from, so the next tick notices the change and re-indexes from scratch — no manual bucket wipe.
+When the contracts are redeployed, update `FEE_ROUTER`, `CAPACITY_BOND` and `START_BLOCK` in [`worker/wrangler.jsonc`](worker/wrangler.jsonc) (and `START_BLOCK` in `.env`). Both addresses come from `decdn/contracts/deployments/421614.json`, but that file's `deployBlock` is an **L1** number — `START_BLOCK` must be the L2 block: take the FeeRouter creation tx's block from arbiscan, or the first L2 block whose `l1BlockNumber` ≥ `deployBlock`. `stats.json` records the deployment it was built from, so the next tick notices the change and re-indexes from scratch — no manual bucket wipe. The same happens when a worker change bumps the `stats.json` schema version (`STATS_VERSION` in [`worker/src/stats.ts`](worker/src/stats.ts)); deploy the worker first and wait for its first tick (`/stats.json` shows the new `version`) before deploying the page. The old page then sees an unknown version, throws, and ISR keeps serving its last render; a page *built* while the bucket still holds the old version would fail its build. The rebuild takes several ticks, during which the cards show "catching up". Changing only `CAPACITY_BOND` doesn't re-index — it just clears the active-node samples.
 
 ## Scripts
 
@@ -56,18 +56,20 @@ There is no test framework in this project. Verify changes with `pnpm typecheck 
 
 ```
 app/            layout, globals.css, and page.tsx — the only composition point
-blocks/         page sections (hero, metric-*, by-region, settlements)
+blocks/         page sections (hero, metric-*, by-region, settlements); charts/ holds the metric cards' client charts
 globals/        chrome reused across sections (Header, Footer, SectionDivider)
 components/ui/  unmodified shadcn/ui primitives
-lib/mock.ts     the figures — typed exports standing in for on-chain reads
+lib/stats.ts    getStats() — reads the worker's stats.json
+lib/metrics.ts  stats.json → metric card view models (headline, 24h change, hourly series)
+lib/mock.ts     by-region figures — typed exports standing in for on-chain reads
 ```
 
 Two rules explain most of the structure:
 
-- **Figures and copy are separated.** `lib/mock.ts` holds only values (`Metric`, `MetricPoint`, `Region`, `RegionStats`). Headlines, labels, and prose are hardcoded in the block that renders them — so changing what the page *says* means editing that block, not the data file.
-- **Blocks take no props and own no layout.** Each section is a zero-prop component that imports its own figures. `app/page.tsx` assembles them and owns all page-level layout (the `max-w-6xl` container, the metrics grid).
+- **Figures and copy are separated.** `lib/metrics.ts` and `lib/mock.ts` hold only values and statuses (`Metric`, `MetricView`, `Region`, `RegionStats`); even empty-state labels live in the blocks. Headlines, labels, and prose are hardcoded in the block that renders them — so changing what the page *says* means editing that block, not the data file.
+- **Blocks take no props and own no layout.** Each section's entry component takes no props and loads its own figures; only the `charts/metric-*-chart.tsx` client halves receive `series` from their server block. `app/page.tsx` assembles them and owns all page-level layout (the `max-w-6xl` container, the metrics grid).
 
-The three metric cards are deliberately separate files rather than one parameterized component: each owns its own `ChartConfig`, gradient `id`, and Y-domain math. They are client components (`"use client"`) because of recharts; the rest are server components.
+The three metric cards are deliberately separate files rather than one parameterized component: each owns its own `ChartConfig`, gradient `id`, and Y-domain math. Each is an async server component (`metric-*.tsx`, awaits `getStats()`) paired with a `"use client"` chart (`charts/metric-*-chart.tsx`) because of recharts; the rest are server components.
 
 ## Conventions
 

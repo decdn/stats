@@ -2,14 +2,22 @@ export { cn } from "cn"
 
 const byteUnits = ["B", "KB", "MB", "GB", "TB", "PB"]
 
-export function formatBytes(bytes: number) {
+// Raw byte count → value in the largest base-1000 unit (up to PB) that keeps
+// it ≥ 1,
+// plus the divisor so related figures can be put in the same unit.
+export function scaleBytes(bytes: number) {
   let value = bytes
   let unit = 0
   while (value >= 1000 && unit < byteUnits.length - 1) {
     value /= 1000
     unit += 1
   }
-  return `${value.toFixed(1)} ${byteUnits[unit]}`
+  return { value, unit: byteUnits[unit], divisor: 1000 ** unit }
+}
+
+export function formatBytes(bytes: number) {
+  const { value, unit } = scaleBytes(bytes)
+  return `${value.toFixed(1)} ${unit}`
 }
 
 // 6-decimal USDC base units → "0.318204", without going through a float.
@@ -19,6 +27,12 @@ export function formatUsdc(base: string) {
   const whole = value / scale
   const frac = (value % scale).toString().padStart(6, "0")
   return `${whole}.${frac}`
+}
+
+// 6-decimal USDC base units → "61.40", truncated (never rounded up) to cents.
+export function formatUsdcCents(base: string) {
+  const [whole, frac] = formatUsdc(base).split(".")
+  return `${whole}.${frac.slice(0, 2)}`
 }
 
 export function truncateHex(hex: string, lead = 6, tail = 4) {
