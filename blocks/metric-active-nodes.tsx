@@ -1,4 +1,4 @@
-import { ActiveNodesChart } from "@/blocks/metric-active-nodes-chart"
+import { ActiveNodesChart } from "@/blocks/charts/metric-active-nodes-chart"
 import {
   Card,
   CardAction,

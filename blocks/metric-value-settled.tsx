@@ -1,4 +1,4 @@
-import { ValueSettledChart } from "@/blocks/metric-value-settled-chart"
+import { ValueSettledChart } from "@/blocks/charts/metric-value-settled-chart"
 import {
   Card,
   CardAction,

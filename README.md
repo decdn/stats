@@ -56,7 +56,7 @@ There is no test framework in this project. Verify changes with `pnpm typecheck 
 
 ```
 app/            layout, globals.css, and page.tsx — the only composition point
-blocks/         page sections (hero, metric-*, by-region, settlements)
+blocks/         page sections (hero, metric-*, by-region, settlements); charts/ holds the metric cards' client charts
 globals/        chrome reused across sections (Header, Footer, SectionDivider)
 components/ui/  unmodified shadcn/ui primitives
 lib/stats.ts    getStats() — reads the worker's stats.json
@@ -67,9 +67,9 @@ lib/mock.ts     by-region figures — typed exports standing in for on-chain rea
 Two rules explain most of the structure:
 
 - **Figures and copy are separated.** `lib/metrics.ts` and `lib/mock.ts` hold only values and statuses (`Metric`, `MetricView`, `Region`, `RegionStats`); even empty-state labels live in the blocks. Headlines, labels, and prose are hardcoded in the block that renders them — so changing what the page *says* means editing that block, not the data file.
-- **Blocks take no props and own no layout.** Each section's entry component takes no props and loads its own figures; only the `metric-*-chart.tsx` client halves receive `series` from their server block. `app/page.tsx` assembles them and owns all page-level layout (the `max-w-6xl` container, the metrics grid).
+- **Blocks take no props and own no layout.** Each section's entry component takes no props and loads its own figures; only the `charts/metric-*-chart.tsx` client halves receive `series` from their server block. `app/page.tsx` assembles them and owns all page-level layout (the `max-w-6xl` container, the metrics grid).
 
-The three metric cards are deliberately separate files rather than one parameterized component: each owns its own `ChartConfig`, gradient `id`, and Y-domain math. Each is an async server component (`metric-*.tsx`, awaits `getStats()`) paired with a `"use client"` chart (`metric-*-chart.tsx`) because of recharts; the rest are server components.
+The three metric cards are deliberately separate files rather than one parameterized component: each owns its own `ChartConfig`, gradient `id`, and Y-domain math. Each is an async server component (`metric-*.tsx`, awaits `getStats()`) paired with a `"use client"` chart (`charts/metric-*-chart.tsx`) because of recharts; the rest are server components.
 
 ## Conventions
 

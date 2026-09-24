@@ -1,4 +1,4 @@
-import { BytesServedChart } from "@/blocks/metric-bytes-served-chart"
+import { BytesServedChart } from "@/blocks/charts/metric-bytes-served-chart"
 import {
   Card,
   CardAction,
