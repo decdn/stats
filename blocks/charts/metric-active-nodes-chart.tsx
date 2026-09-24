@@ -57,7 +57,7 @@ export function ActiveNodesChart({ series }: { series: MetricPoint[] }) {
         </defs>
         <Area
           dataKey="value"
-          type="natural"
+          type="stepAfter"
           fill="url(#fillActiveNodes)"
           stroke="var(--color-value)"
           strokeWidth={1.5}

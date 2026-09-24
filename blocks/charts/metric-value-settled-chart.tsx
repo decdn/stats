@@ -57,7 +57,7 @@ export function ValueSettledChart({ series }: { series: MetricPoint[] }) {
         </defs>
         <Area
           dataKey="value"
-          type="natural"
+          type="monotone"
           fill="url(#fillValueSettled)"
           stroke="var(--color-value)"
           strokeWidth={1.5}

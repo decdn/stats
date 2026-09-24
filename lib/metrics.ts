@@ -45,9 +45,14 @@ export async function loadMetric(
   }
   const metric = build(stats)
   if (!metric) return { status: "unsampled" }
+  return { status: "ok", metric, staleSince: staleSince(stats) }
+}
+
+// Unix seconds of the worker's last write when it has stopped writing, else
+// null.
+export function staleSince(stats: Stats) {
   const updatedAt = Date.parse(stats.updatedAt)
-  const stale = Date.now() - updatedAt > staleAfterMs
-  return { status: "ok", metric, staleSince: stale ? updatedAt / 1000 : null }
+  return Date.now() - updatedAt > staleAfterMs ? updatedAt / 1000 : null
 }
 
 // A non-negative sum as a delta. "Up" only when the displayed figure is
@@ -82,6 +87,7 @@ export function valueSettledMetric(stats: Stats): Metric {
   const { total, series, delta } = cumulative(stats, "valueSettled")
   return {
     value: formatUsdcCents(total.toString()),
+    unit: "usdc",
     delta: signedDelta(formatUsdcCents(delta.toString())),
     series: series.map((point) => ({
       t: point.t,

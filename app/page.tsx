@@ -19,7 +19,7 @@ export default function Page() {
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-12 px-6">
         <Hero />
         <SectionDivider
-          left="uncheatable · on-chain"
+          left="totals"
           right="source: FeeRouter · CapacityBond"
         />
         <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -27,15 +27,9 @@ export default function Page() {
           <MetricBytesServed />
           <MetricActiveNodes />
         </section>
-        <SectionDivider
-          left="by region"
-          right="NODES ON-CHAIN · QUALITY FROM PULL-THROUGH"
-        />
+        <SectionDivider left="by region" right="delivery quality" />
         <ByRegion />
-        <SectionDivider
-          left="uncheatable · on-chain"
-          right="source: FeeRouter · CapacityBond"
-        />
+        <SectionDivider left="settlements" right="source: FeeRouter" />
         <SettlementsTable />
       </main>
       <SiteFooter />

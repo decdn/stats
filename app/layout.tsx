@@ -36,7 +36,7 @@ export default function RootLayout({
       )}
     >
       <body>
-        <ThemeProvider defaultTheme="light" enableSystem={false}>
+        <ThemeProvider>
           <TooltipProvider>{children}</TooltipProvider>
         </ThemeProvider>
       </body>

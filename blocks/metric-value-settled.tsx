@@ -1,7 +1,6 @@
 import { ValueSettledChart } from "@/blocks/charts/metric-value-settled-chart"
 import {
   Card,
-  CardAction,
   CardContent,
   CardFooter,
   CardHeader,
@@ -28,24 +27,21 @@ export async function MetricValueSettled() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-mono text-[11px] font-normal tracking-widest text-muted-foreground uppercase">
-          value settled
-        </CardTitle>
-        <CardAction>
-          <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 font-mono text-[10px] text-muted-foreground ring-1 ring-foreground/10">
-            <span className="size-1.5 rounded-full bg-accent-green" />
-            on-chain
-          </span>
-        </CardAction>
+        <CardTitle className="font-medium">value settled</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="flex items-baseline gap-1.5">
           <span className="font-mono text-5xl tracking-tight tabular-nums md:text-6xl">
             {metric?.value ?? "—"}
           </span>
+          {metric?.unit && (
+            <span className="font-mono text-xl text-muted-foreground">
+              {metric.unit}
+            </span>
+          )}
         </div>
         <p className="text-sm text-muted-foreground">
-          testnet-usdc · 6-decimal base units
+          testnet usdc, summed from settlement logs
         </p>
         {metric?.delta && staleSince === null && (
           <p className="text-sm">

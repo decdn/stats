@@ -57,7 +57,7 @@ export function BytesServedChart({ series }: { series: MetricPoint[] }) {
         </defs>
         <Area
           dataKey="value"
-          type="natural"
+          type="monotone"
           fill="url(#fillBytesServed)"
           stroke="var(--color-value)"
           strokeWidth={1.5}
