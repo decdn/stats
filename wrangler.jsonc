@@ -10,16 +10,11 @@
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
   "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "stats" }],
-  // ISR cache for the page's 60s revalidate (open-next.config.ts).
+  // ISR cache for the page's 60s revalidate (open-next.config.ts). Deploys
+  // create the bucket if it's missing.
   "r2_buckets": [
     { "binding": "NEXT_INC_CACHE_R2_BUCKET", "bucket_name": "decdn-stats-cache" }
   ],
-  "durable_objects": {
-    "bindings": [
-      { "name": "NEXT_CACHE_DO_QUEUE", "class_name": "DOQueueHandler" }
-    ]
-  },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["DOQueueHandler"] }],
   // must match CHAIN_ID in worker/wrangler.jsonc. STATS_BASE_URL is set in the
   // dashboard (the indexer's URL); keep_vars stops a deploy from wiping it.
   "vars": { "CHAIN_ID": "421614" },

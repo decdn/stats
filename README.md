@@ -42,11 +42,11 @@ The repo deploys as two Workers, each with its own wrangler config. On Workers B
 | Worker | Config | Build command | Deploy command | Non-production branch deploy command |
 | --- | --- | --- | --- | --- |
 | `decdn-stats-worker` (indexer) | [`worker/wrangler.jsonc`](worker/wrangler.jsonc) | *(none)* | `pnpm worker:deploy` | `pnpm --filter @decdn/stats-worker exec wrangler versions upload` |
-| `stats` (the page) | [`wrangler.jsonc`](wrangler.jsonc) | `pnpm opennextjs-cloudflare build` | `pnpm opennextjs-cloudflare deploy` | `pnpm opennextjs-cloudflare upload` |
+| `stats` (the page) | [`wrangler.jsonc`](wrangler.jsonc) | `pnpm run build` | `npx wrangler deploy` | `npx wrangler versions upload` |
 
-The Worker name in the dashboard must match `name` in its wrangler config, or the build fails. The dashboard's default commands (`pnpm run build`, `npx wrangler deploy`) don't work for the page: plain `next build` never produces `.open-next/worker.js`.
+The Worker name in the dashboard must match `name` in its wrangler config, or the build fails. The page's commands are the Workers Builds defaults: `pnpm build` is the [`@opennextjs/cloudflare`](https://opennext.js.org/cloudflare) build (it runs `next build` itself, via `buildCommand` in [`open-next.config.ts`](open-next.config.ts)) and writes the Worker to `.open-next/`. Keep the page free of Durable Object migrations: `wrangler versions upload`, which builds non-production branches, refuses to apply them — hence the in-memory revalidation queue.
 
-Deploy the indexer first: it needs the `decdn-stats` R2 bucket and an `RPC_URL` secret. The page is built with [`@opennextjs/cloudflare`](https://opennext.js.org/cloudflare) and needs the `decdn-stats-cache` R2 bucket (`wrangler r2 bucket create decdn-stats-cache`), which holds the ISR cache behind its 60s revalidate ([`open-next.config.ts`](open-next.config.ts)). Set `STATS_BASE_URL` to the indexer's URL (`https://decdn-stats-worker.<subdomain>.workers.dev`) both as a build variable and as a runtime variable on the page's Worker; `CHAIN_ID` is in `wrangler.jsonc` but also needs to be a build variable so the prerendered page isn't "not configured" until its first revalidate. Locally, `pnpm app:preview` runs the built Worker and `pnpm app:deploy` deploys it.
+Deploy the indexer first: it needs the `decdn-stats` R2 bucket and an `RPC_URL` secret. The page keeps its ISR cache (the 60s revalidate) in the `decdn-stats-cache` R2 bucket, which `wrangler deploy` creates if it's missing. Set `STATS_BASE_URL` to the indexer's URL (`https://decdn-stats-worker.<subdomain>.workers.dev`) as a runtime variable on the page's Worker; `CHAIN_ID` is in `wrangler.jsonc`. Locally, `pnpm app:preview` runs the built Worker and `pnpm app:deploy` deploys it (also pre-filling the R2 cache, which `wrangler deploy` leaves to the first request).
 
 When the contracts are redeployed, update `FEE_ROUTER`, `CAPACITY_BOND`, `PAYMENT_POOL` and `START_BLOCK` in [`worker/wrangler.jsonc`](worker/wrangler.jsonc) (and `START_BLOCK` in `.env`). The addresses come from `decdn/contracts/deployments/421614.json`, but that file's `deployBlock` is an **L1** number — `START_BLOCK` must be the L2 block: take the earliest creation block of the three contracts from arbiscan, or the first L2 block whose `l1BlockNumber` ≥ `deployBlock`. The stats file records the deployment it was built from (chain, the three addresses, `START_BLOCK`), so the next tick notices the change and re-indexes from scratch over it. A stats file the worker can't read (bad JSON, or a shape from an older worker) is overwritten the same way. The rebuild takes several ticks, during which the cards show "catching up".
 
@@ -55,7 +55,7 @@ When the contracts are redeployed, update `FEE_ROUTER`, `CAPACITY_BOND`, `PAYMEN
 | Command          | What it does                    |
 | ---------------- | ------------------------------- |
 | `pnpm dev`       | Start the dev server            |
-| `pnpm build`     | Production build                |
+| `pnpm build`     | Production build (OpenNext, for Cloudflare) |
 | `pnpm start`     | Serve the production build      |
 | `pnpm lint`      | ESLint (next core-web-vitals)   |
 | `pnpm typecheck` | `tsc --noEmit`                  |
