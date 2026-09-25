@@ -14,9 +14,12 @@
   "r2_buckets": [
     // ISR cache for the page's 60s revalidate (open-next.config.ts). Deploys
     // create the bucket if it's missing.
-    { "binding": "NEXT_INC_CACHE_R2_BUCKET", "bucket_name": "decdn-stats-cache" },
+    {
+      "binding": "NEXT_INC_CACHE_R2_BUCKET",
+      "bucket_name": "decdn-stats-cache",
+    },
     // stats-<CHAIN_ID>.json: written by the cron, read by the page
-    { "binding": "STATS", "bucket_name": "decdn-stats" }
+    { "binding": "STATS", "bucket_name": "decdn-stats" },
   ],
   // RPC_URL is a secret (`wrangler secret put RPC_URL`; `.env` locally).
   "vars": {
@@ -27,7 +30,7 @@
     "PAYMENT_POOL": "0x351E5544471e11638b89DF8E3A3299c28E00cEc3",
     "LOG_CHUNK_BLOCKS": "10000",
     "MAX_CHUNKS_PER_RUN": "20",
-    "CONFIRMATIONS": "1200"
+    "CONFIRMATIONS": "1200",
   },
   // Branch Previews (`wrangler preview`, Workers Builds' non-production
   // deploy) inherit no vars or bindings and run no cron, so a Preview is just
@@ -41,10 +44,10 @@
     "r2_buckets": [
       {
         "binding": "NEXT_INC_CACHE_R2_BUCKET",
-        "bucket_name": "decdn-stats-cache"
+        "bucket_name": "decdn-stats-cache",
       },
-      { "binding": "STATS", "bucket_name": "decdn-stats" }
-    ]
+      { "binding": "STATS", "bucket_name": "decdn-stats" },
+    ],
   },
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
 }

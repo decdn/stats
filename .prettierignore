@@ -6,4 +6,4 @@ coverage/
 pnpm-lock.yaml
 .pnpm-store/
 .wrangler/
-worker/worker-configuration.d.ts
+cloudflare-env.d.ts

@@ -4,6 +4,9 @@
   "type": "module",
   "private": true,
   "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=22.22.1"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "pnpm cf-typegen && opennextjs-cloudflare build",
@@ -11,7 +14,7 @@
     "app:preview": "pnpm build && opennextjs-cloudflare preview",
     "app:deploy": "pnpm build && opennextjs-cloudflare deploy",
     "lint": "eslint",
-    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,mjs,cjs,json,css,md,yaml,yml}\"",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,mjs,cjs,json,jsonc,css,md,yaml,yml}\"",
     "typecheck": "tsc --noEmit",
     "index": "tsx worker/src/tick.ts",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
@@ -23,7 +26,7 @@
       "eslint --fix",
       "prettier --write"
     ],
-    "*.{json,md,css,yaml,yml}": [
+    "*.{json,jsonc,md,css,yaml,yml}": [
       "prettier --write"
     ]
   },

@@ -11,7 +11,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ## Commands
 
-Package manager is **pnpm** (see `pnpm-workspace.yaml`, `pnpm-lock.yaml`).
+Package manager is **pnpm** (see `pnpm-workspace.yaml`, `pnpm-lock.yaml`). Node ≥ 22.22.1 (`engines`; lint-staged 17 and commitlint 21 need it).
 
 ```bash
 pnpm dev        # next dev
@@ -19,7 +19,8 @@ pnpm build      # cf-typegen, then opennextjs-cloudflare build (runs next build 
 pnpm start      # next start (after build)
 pnpm lint       # eslint (flat config, next core-web-vitals + typescript)
 pnpm typecheck  # wrangler types (cf-typegen → cloudflare-env.d.ts), then tsc --noEmit — the file is gitignored, so build and typecheck both generate it first
-pnpm format     # prettier --write over ts/tsx/js/json/css/md/yaml
+pnpm format     # prettier --write "**/*.{ts,tsx,js,jsx,mjs,cjs,json,jsonc,css,md,yaml,yml}"
+pnpm cf-typegen   # wrangler types → cloudflare-env.d.ts (gitignored)
 pnpm index        # one indexer tick (worker/src/tick.ts) into the local, or .env-configured, bucket
 pnpm app:preview  # opennextjs-cloudflare build + preview (the Worker on workerd)
 pnpm app:deploy   # opennextjs-cloudflare build + deploy
@@ -27,7 +28,7 @@ pnpm app:deploy   # opennextjs-cloudflare build + deploy
 
 There is no test framework in this project — no test runner, config, or test files. Verify changes with `pnpm typecheck && pnpm lint` (both cover `worker/`) and by looking at the running dev server. Local end-to-end for the indexer: `RPC_URL` in `.env`, `pnpm index` (repeat until caught up), then `pnpm dev` — both get the Worker's bindings and vars from `wrangler.jsonc` + `.env` via wrangler's `getPlatformProxy` (`next.config.ts` calls `initOpenNextCloudflareForDev`) and share the emulated bucket in `.wrangler/state` (see README).
 
-Git hooks (husky, installed by `pnpm install` via `prepare`): `pre-commit` runs lint-staged — `eslint --fix` + `prettier --write` on staged JS/TS, `prettier --write` on staged json/md/css/yaml; `commit-msg` runs commitlint (`@commitlint/config-conventional`). Typecheck is deliberately not in the hook (whole-project, and it regenerates `cloudflare-env.d.ts`).
+Git hooks (husky, installed by `pnpm install` via `prepare`): `pre-commit` runs lint-staged — `eslint --fix` + `prettier --write` on staged JS/TS, `prettier --write` on staged json/jsonc/md/css/yaml/yml; `commit-msg` runs commitlint (`@commitlint/config-conventional`). Both are local only: `git commit --no-verify` or `HUSKY=0` skips them, and CI doesn't re-check. Typecheck is deliberately not in the hook: it checks the whole project, and `pretypecheck` first rewrites the gitignored `cloudflare-env.d.ts` with `wrangler types`.
 
 Cloudflare: the repo is one Worker, `stats`, configured by the root `wrangler.jsonc`. Its `main` is `worker/src/index.ts`, which wraps the `fetch` handler `@opennextjs/cloudflare` generates in `.open-next/worker.js` (hence the `@ts-ignore` on that import: the file exists only after a build) and adds the cron's `scheduled` handler. `open-next.config.ts` puts the ISR cache in the `decdn-stats-cache` R2 bucket, with an in-memory queue because `wrangler versions upload` rejects Durable Object migrations. It deploys with the Workers Builds defaults (`pnpm run build`, `npx wrangler deploy`); `RPC_URL` is a Worker secret. Non-production branches deploy with `npx wrangler preview`, which inherits no vars or bindings: `wrangler.jsonc` `previews` redeclares only what the page reads (`CHAIN_ID`, the two production buckets), so a Preview runs no cron and never revalidates ISR. See README "Deploying to Cloudflare".
 
@@ -56,4 +57,4 @@ The layering that matters:
 - Visual voice: lowercase copy, `font-mono` uppercase micro-labels with wide tracking for metadata, `tabular-nums` for figures.
 - `lib/utils.ts` re-exports `cn` from the `cn` package and holds the display formatters (`scaleBytes`/`formatBytes` pick a base-1000 unit for a raw byte count; `formatUsdc`/`formatUsdcCents` do bigint-safe 6-decimal USDC). Import paths use the `@/*` alias rooted at the project directory.
 - Prettier: no semicolons, double quotes, 2-space indent, 80 columns, with `prettier-plugin-tailwindcss` sorting classes.
-- Commits follow Conventional Commits (`feat:`, `fix:`, `refactor:`, `chore:`), enforced by the `commit-msg` hook.
+- Commits follow Conventional Commits, checked by the `commit-msg` hook (`@commitlint/config-conventional`): a type from `feat`, `fix`, `refactor`, `chore`, `docs`, `style`, `perf`, `test`, `build`, `ci`, `revert`; a subject not in sentence, start, pascal or upper case; header and body lines of at most 100 characters. The hook is local, so a squash merge's title (the PR title) is never checked.

@@ -19,7 +19,7 @@ Built with Next.js (App Router), React 19, Tailwind CSS v4, shadcn/ui, and recha
 
 ## Getting started
 
-Package manager is **pnpm**.
+Package manager is **pnpm**; Node ≥ 22.22.1 (`engines` — the git hooks' lint-staged and commitlint need it).
 
 ```bash
 pnpm install
@@ -56,8 +56,8 @@ When the contracts are redeployed, update `FEE_ROUTER`, `CAPACITY_BOND`, `PAYMEN
 | `pnpm build`       | Production build (OpenNext, for Cloudflare)                                                             |
 | `pnpm start`       | Serve the production build                                                                              |
 | `pnpm lint`        | ESLint (next core-web-vitals)                                                                           |
-| `pnpm typecheck`   | `tsc --noEmit`                                                                                          |
-| `pnpm format`      | Prettier over ts/tsx/js/json/css/md/yaml                                                                |
+| `pnpm typecheck`   | `wrangler types` (via `cf-typegen`), then `tsc --noEmit`                                                |
+| `pnpm format`      | Prettier over ts/tsx/js/jsx/mjs/cjs/json/jsonc/css/md/yaml/yml                                          |
 | `pnpm index`       | Run one indexer tick into the local (or `.env`-configured) bucket                                       |
 | `pnpm cf-typegen`  | Generate `cloudflare-env.d.ts` from `wrangler.jsonc` (gitignored; `build` and `typecheck` run it first) |
 | `pnpm app:preview` | Build with OpenNext and run the Worker in workerd                                                       |
@@ -65,7 +65,7 @@ When the contracts are redeployed, update `FEE_ROUTER`, `CAPACITY_BOND`, `PAYMEN
 
 There is no test framework in this project. Verify changes with `pnpm typecheck && pnpm lint` and by looking at the running dev server.
 
-`pnpm install` also installs husky git hooks: `pre-commit` runs lint-staged (ESLint + Prettier on staged files) and `commit-msg` checks the message against Conventional Commits with commitlint.
+`pnpm install` also installs husky git hooks: `pre-commit` runs lint-staged (ESLint `--fix` + Prettier on staged JS/TS, Prettier on staged JSON/JSONC/Markdown/CSS/YAML) and `commit-msg` checks the message against Conventional Commits with commitlint. They're local only: `git commit --no-verify` or `HUSKY=0` skips them.
 
 ## Project layout
 
@@ -94,7 +94,7 @@ The three metric cards are deliberately separate files rather than one parameter
 - Visual voice: lowercase copy, `font-mono` uppercase micro-labels with wide tracking for metadata, `tabular-nums` for figures.
 - Import paths use the `@/*` alias rooted at the project directory.
 - Prettier: no semicolons, double quotes, 2-space indent, 80 columns, with `prettier-plugin-tailwindcss` sorting classes.
-- Commits follow Conventional Commits (`feat:`, `fix:`, `refactor:`, `chore:`), enforced by the `commit-msg` hook.
+- Commits follow Conventional Commits, checked by the `commit-msg` hook (`@commitlint/config-conventional`): a type from `feat`, `fix`, `refactor`, `chore`, `docs`, `style`, `perf`, `test`, `build`, `ci`, `revert`; a subject not in sentence, start, pascal or upper case; header and body lines of at most 100 characters. The hook is local, so a squash merge's title (the PR title) is never checked.
 
 ## Adding UI components
 
