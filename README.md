@@ -57,13 +57,15 @@ When the contracts are redeployed, update `FEE_ROUTER`, `CAPACITY_BOND`, `PAYMEN
 | `pnpm start`       | Serve the production build                                                                              |
 | `pnpm lint`        | ESLint (next core-web-vitals)                                                                           |
 | `pnpm typecheck`   | `tsc --noEmit`                                                                                          |
-| `pnpm format`      | Prettier over `**/*.{ts,tsx}`                                                                           |
+| `pnpm format`      | Prettier over ts/tsx/js/json/css/md/yaml                                                                |
 | `pnpm index`       | Run one indexer tick into the local (or `.env`-configured) bucket                                       |
 | `pnpm cf-typegen`  | Generate `cloudflare-env.d.ts` from `wrangler.jsonc` (gitignored; `build` and `typecheck` run it first) |
 | `pnpm app:preview` | Build with OpenNext and run the Worker in workerd                                                       |
 | `pnpm app:deploy`  | Build and deploy the Worker to Cloudflare                                                               |
 
 There is no test framework in this project. Verify changes with `pnpm typecheck && pnpm lint` and by looking at the running dev server.
+
+`pnpm install` also installs husky git hooks: `pre-commit` runs lint-staged (ESLint + Prettier on staged files) and `commit-msg` checks the message against Conventional Commits with commitlint.
 
 ## Project layout
 
@@ -92,7 +94,7 @@ The three metric cards are deliberately separate files rather than one parameter
 - Visual voice: lowercase copy, `font-mono` uppercase micro-labels with wide tracking for metadata, `tabular-nums` for figures.
 - Import paths use the `@/*` alias rooted at the project directory.
 - Prettier: no semicolons, double quotes, 2-space indent, 80 columns, with `prettier-plugin-tailwindcss` sorting classes.
-- Commits follow Conventional Commits (`feat:`, `fix:`, `refactor:`, `chore:`).
+- Commits follow Conventional Commits (`feat:`, `fix:`, `refactor:`, `chore:`), enforced by the `commit-msg` hook.
 
 ## Adding UI components
 
