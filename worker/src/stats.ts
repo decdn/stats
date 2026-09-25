@@ -1,7 +1,6 @@
 // The shape of stats.json on R2, plus the pure functions that build it.
 // No I/O here — the Next app imports the types from this file.
 
-export const STATS_VERSION = 2
 export const DAILY_RETENTION_DAYS = 92
 // 24 buckets for the page's rolling-24h window, plus the hour before it so
 // the active-node delta has a sample from 24h ago to compare against.
@@ -40,14 +39,12 @@ export type HourlyPoint = {
 }
 
 export type Stats = {
-  version: typeof STATS_VERSION
-  chainId: number
   // The deployment this file was built from. A run whose config names a
-  // different FeeRouter or start block discards the file and re-indexes.
+  // different one discards the file and re-indexes.
+  chainId: number
   feeRouter: Hex
   startBlock: number
-  // Where `hourly[].activeNodes` samples come from. A different CapacityBond
-  // only clears those samples; settlements don't depend on it.
+  // Where `hourly[].activeNodes` samples come from.
   capacityBond: Hex
   updatedAt: string
   lastBlock: number
@@ -72,7 +69,6 @@ export function emptyStats(
   capacityBond: Hex
 ): Stats {
   return {
-    version: STATS_VERSION,
     chainId,
     feeRouter,
     startBlock,
@@ -89,39 +85,33 @@ export function emptyStats(
   }
 }
 
-export type ParsedStats =
-  | { status: "ok"; stats: Stats }
-  // Written under an older schema. It can't be migrated in place (its folded
-  // history lacks whatever the current version tracks), so the caller
-  // re-indexes — after checking it's for the configured chain.
-  | { status: "outdated"; version: number; chainId: number }
-
-export function parseStats(json: string): ParsedStats {
-  const stats = JSON.parse(json) as Stats | null
-  if (!stats || typeof stats !== "object") {
-    throw new Error("stats.json is malformed")
-  }
-  if (typeof stats.version === "number" && stats.version < STATS_VERSION) {
-    return {
-      status: "outdated",
-      version: stats.version,
-      chainId: stats.chainId,
-    }
-  }
-  if (stats.version !== STATS_VERSION) {
-    throw new Error(`unsupported stats.json version ${String(stats.version)}`)
+// Returns the stored stats when they can be extended: valid JSON of the
+// expected shape, built from the same deployment as `fresh`. Anything else
+// returns null and the caller re-indexes from scratch over it.
+export function resumeStats(json: string, fresh: Stats): Stats | null {
+  let stats: Stats | null
+  try {
+    stats = JSON.parse(json) as Stats | null
+  } catch {
+    return null
   }
   if (
+    !stats ||
+    typeof stats !== "object" ||
     !Array.isArray(stats.daily) ||
     !Array.isArray(stats.hourly) ||
     !Array.isArray(stats.settlements) ||
     typeof stats.lastBlock !== "number" ||
     typeof stats.caughtUp !== "boolean" ||
-    typeof stats.capacityBond !== "string"
+    !stats.totals ||
+    stats.chainId !== fresh.chainId ||
+    stats.feeRouter !== fresh.feeRouter ||
+    stats.startBlock !== fresh.startBlock ||
+    stats.capacityBond !== fresh.capacityBond
   ) {
-    throw new Error("stats.json is malformed")
+    return null
   }
-  return { status: "ok", stats }
+  return stats
 }
 
 export function serializeStats(stats: Stats) {
@@ -183,7 +173,7 @@ function bucket<P>(points: P[], buckets: Buckets<P>, key: string): P {
     // (recordActiveNodes) and an event mined up to CONFIRMATIONS blocks
     // (~5 min) plus a cron interval earlier lands on the next run.
     const front: P[] = []
-    for (let cursor = key; cursor < buckets.key(first);) {
+    for (let cursor = key; cursor < buckets.key(first); ) {
       front.push(buckets.empty(cursor))
       cursor = buckets.next(cursor)
     }
@@ -254,14 +244,6 @@ export function applyEvents(stats: Stats, events: SettlementRow[]) {
 // sample of its hour.
 export function recordActiveNodes(stats: Stats, now: number, count: number) {
   bucket(stats.hourly, hours, utcHour(now)).activeNodes = count
-  return stats
-}
-
-// Switches the active-node source to another CapacityBond. Samples from the
-// old contract are dropped so the 24h delta never spans two contracts.
-export function resetActiveNodes(stats: Stats, capacityBond: Hex) {
-  for (const point of stats.hourly) point.activeNodes = null
-  stats.capacityBond = capacityBond
   return stats
 }
 

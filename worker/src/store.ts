@@ -1,65 +1,63 @@
 import { AwsClient } from "aws4fetch"
 
-import type { Env } from "./env"
-
-export const STATS_KEY = "stats.json"
+import { parseChainId, type Env } from "./env"
 
 const httpMetadata = {
   contentType: "application/json",
   cacheControl: "public, max-age=60",
 }
 
-// Where stats.json lives. The R2 *binding* is the default (prod, and the
+// One file per chain, so switching CHAIN_ID never overwrites another chain's
+// history.
+export function statsKey(env: Env) {
+  return `stats-${parseChainId(env)}.json`
+}
+
+// Where the stats file lives. The R2 *binding* is the default (prod, and the
 // locally emulated bucket under `wrangler dev`). When S3 credentials are set
 // the same bucket (assuming `R2_BUCKET` matches wrangler.jsonc's
 // `bucket_name`) is reached over R2's S3 API instead, so a local run can
 // read/write the real bucket without `wrangler dev --remote`.
 export type StatsStore = {
   label: string
+  key: string
   get(): Promise<string | null>
   put(body: string): Promise<void>
-  // Copies the current stats.json to a recovery key before a destructive
-  // rewrite (deployment or schema reset). A missing source is a no-op.
-  backup(): Promise<void>
 }
 
-export const BACKUP_KEY = "stats.json.pre-reindex"
-
 export function statsStore(env: Env): StatsStore {
-  if (env.R2_ACCESS_KEY_ID) return s3Store(env)
+  const key = statsKey(env)
+  if (env.R2_ACCESS_KEY_ID) return s3Store(env, key)
   if (!env.STATS) {
     throw new Error(
       "R2 binding STATS is missing and no R2_* S3 credentials are set"
     )
   }
-  return bindingStore(env.STATS)
+  return bindingStore(env.STATS, key)
 }
 
-function bindingStore(bucket: R2Bucket): StatsStore {
+function bindingStore(bucket: R2Bucket, key: string): StatsStore {
   return {
-    label: "r2 binding",
+    label: `r2 binding ${key}`,
+    key,
     async get() {
-      const object = await bucket.get(STATS_KEY)
+      const object = await bucket.get(key)
       return object ? object.text() : null
     },
     async put(body) {
-      await bucket.put(STATS_KEY, body, { httpMetadata })
-    },
-    async backup() {
-      const object = await bucket.get(STATS_KEY)
-      if (object) await bucket.put(BACKUP_KEY, await object.text())
+      await bucket.put(key, body, { httpMetadata })
     },
   }
 }
 
-function s3Store(env: Env): StatsStore {
-  for (const key of [
+function s3Store(env: Env, key: string): StatsStore {
+  for (const name of [
     "R2_SECRET_ACCESS_KEY",
     "R2_S3_ENDPOINT",
     "R2_BUCKET",
   ] as const) {
-    if (!env[key])
-      throw new Error(`${key} must be set alongside R2_ACCESS_KEY_ID`)
+    if (!env[name])
+      throw new Error(`${name} must be set alongside R2_ACCESS_KEY_ID`)
   }
   const client = new AwsClient({
     accessKeyId: env.R2_ACCESS_KEY_ID!,
@@ -67,10 +65,10 @@ function s3Store(env: Env): StatsStore {
     service: "s3",
     region: "auto",
   })
-  const base = `${env.R2_S3_ENDPOINT!.replace(/\/$/, "")}/${env.R2_BUCKET}`
-  const url = `${base}/${STATS_KEY}`
+  const url = `${env.R2_S3_ENDPOINT!.replace(/\/$/, "")}/${env.R2_BUCKET}/${key}`
   return {
-    label: `s3 ${env.R2_BUCKET}`,
+    label: `s3 ${env.R2_BUCKET}/${key}`,
+    key,
     async get() {
       const res = await client.fetch(url, { method: "GET" })
       if (res.ok) return res.text()
@@ -93,15 +91,6 @@ function s3Store(env: Env): StatsStore {
       })
       if (!res.ok)
         throw new Error(`s3 put failed: ${res.status} ${await res.text()}`)
-    },
-    async backup() {
-      const res = await client.fetch(`${base}/${BACKUP_KEY}`, {
-        method: "PUT",
-        headers: { "x-amz-copy-source": `/${env.R2_BUCKET}/${STATS_KEY}` },
-      })
-      // 404 = nothing to back up; anything else must not be swallowed.
-      if (!res.ok && res.status !== 404)
-        throw new Error(`s3 backup failed: ${res.status} ${await res.text()}`)
     },
   }
 }

@@ -4,7 +4,7 @@ A single-page status dashboard for the DeCDN network — value settled, bytes se
 
 Built with Next.js (App Router), React 19, Tailwind CSS v4, shadcn/ui, and recharts.
 
-> The metric cards and settlements table are live: a Cloudflare Worker in [`worker/`](worker/) indexes `FeeRouter.Settled` logs and samples the `CapacityBond` active-node count on a cron, and writes `stats.json` to R2, which the page reads at build/revalidate time. The by-region table is still a static stand-in from [`lib/mock.ts`](lib/mock.ts).
+> The metric cards and settlements table are live: a Cloudflare Worker in [`worker/`](worker/) indexes `FeeRouter.Settled` logs and samples the `CapacityBond` active-node count on a cron, and writes `stats-<CHAIN_ID>.json` to R2, which the page reads at build/revalidate time. The by-region table is still a static stand-in from [`lib/mock.ts`](lib/mock.ts).
 
 ## Getting started
 
@@ -28,14 +28,14 @@ Trigger the cron by hand and check the result:
 
 ```bash
 curl "http://localhost:8787/__scheduled?cron=*/10+*+*+*+*"
-curl http://localhost:8787/stats.json
+curl http://localhost:8787/stats-421614.json
 ```
 
-Each tick indexes at most `LOG_CHUNK_BLOCKS × MAX_CHUNKS_PER_RUN` blocks (see [`worker/wrangler.jsonc`](worker/wrangler.jsonc)) past `lastBlock`, so the first backfill takes a few ticks; pass `--var LOG_CHUNK_BLOCKS:1000000` to `wrangler dev` if your RPC allows wide `eth_getLogs` ranges. With `STATS_URL=http://localhost:8787/stats.json` in `.env`, `pnpm dev` renders the indexed data. Until the worker has caught up with the chain the metric cards read "catching up · block N" and the table footer "re-indexing". The active-node count is sampled on each caught-up tick (the last sample of each UTC hour is kept), so its sparkline fills in over the first day and its 24h change appears once there's a sample from 24h earlier.
+Each tick indexes at most `LOG_CHUNK_BLOCKS × MAX_CHUNKS_PER_RUN` blocks (see [`worker/wrangler.jsonc`](worker/wrangler.jsonc)) past `lastBlock`, so the first backfill takes a few ticks; pass `--var LOG_CHUNK_BLOCKS:1000000` to `wrangler dev` if your RPC allows wide `eth_getLogs` ranges. With `STATS_BASE_URL=http://localhost:8787` and `CHAIN_ID=421614` in `.env`, `pnpm dev` renders the indexed data. Until the worker has caught up with the chain the metric cards read "catching up · block N" and the table footer "re-indexing". The active-node count is sampled on each caught-up tick (the last sample of each UTC hour is kept), so its sparkline fills in over the first day and its 24h change appears once there's a sample from 24h earlier.
 
 Deploy with `pnpm worker:deploy` after `wrangler login`, `wrangler r2 bucket create decdn-stats`, and `wrangler secret put RPC_URL`.
 
-When the contracts are redeployed, update `FEE_ROUTER`, `CAPACITY_BOND` and `START_BLOCK` in [`worker/wrangler.jsonc`](worker/wrangler.jsonc) (and `START_BLOCK` in `.env`). Both addresses come from `decdn/contracts/deployments/421614.json`, but that file's `deployBlock` is an **L1** number — `START_BLOCK` must be the L2 block: take the FeeRouter creation tx's block from arbiscan, or the first L2 block whose `l1BlockNumber` ≥ `deployBlock`. `stats.json` records the deployment it was built from, so the next tick notices the change and re-indexes from scratch — no manual bucket wipe. The same happens when a worker change bumps the `stats.json` schema version (`STATS_VERSION` in [`worker/src/stats.ts`](worker/src/stats.ts)); deploy the worker first and wait for its first tick (`/stats.json` shows the new `version`) before deploying the page. The old page then sees an unknown version, throws, and ISR keeps serving its last render; a page *built* while the bucket still holds the old version would fail its build. The rebuild takes several ticks, during which the cards show "catching up". Changing only `CAPACITY_BOND` doesn't re-index — it just clears the active-node samples.
+When the contracts are redeployed, update `FEE_ROUTER`, `CAPACITY_BOND` and `START_BLOCK` in [`worker/wrangler.jsonc`](worker/wrangler.jsonc) (and `START_BLOCK` in `.env`). Both addresses come from `decdn/contracts/deployments/421614.json`, but that file's `deployBlock` is an **L1** number — `START_BLOCK` must be the L2 block: take the FeeRouter creation tx's block from arbiscan, or the first L2 block whose `l1BlockNumber` ≥ `deployBlock`. The stats file records the deployment it was built from (chain, `FEE_ROUTER`, `START_BLOCK`, `CAPACITY_BOND`), so the next tick notices the change and re-indexes from scratch over it. A stats file the worker can't read (bad JSON, or a shape from an older worker) is overwritten the same way. The rebuild takes several ticks, during which the cards show "catching up".
 
 ## Scripts
 
@@ -59,8 +59,8 @@ app/            layout, globals.css, and page.tsx — the only composition point
 blocks/         page sections (hero, metric-*, by-region, settlements); charts/ holds the metric cards' client charts
 globals/        chrome reused across sections (Header, Footer, SectionDivider)
 components/ui/  unmodified shadcn/ui primitives
-lib/stats.ts    getStats() — reads the worker's stats.json
-lib/metrics.ts  stats.json → metric card view models (headline, 24h change, hourly series)
+lib/stats.ts    getStats() — reads the worker's stats-<CHAIN_ID>.json
+lib/metrics.ts  stats file → metric card view models (headline, 24h change, hourly series)
 lib/mock.ts     by-region figures — typed exports standing in for on-chain reads
 ```
 

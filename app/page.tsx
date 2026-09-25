@@ -8,7 +8,7 @@ import { SiteFooter } from "@/globals/Footer/site-footer"
 import { SiteHeader } from "@/globals/Header/site-header"
 import { SectionDivider } from "@/globals/SectionDivider/section-divider"
 
-// Route-level ISR: keeps the page regenerating even when STATS_URL is unset
+// Route-level ISR: keeps the page regenerating even when STATS_BASE_URL is unset
 // at build time (no fetch, so no fetch-level revalidate signal exists).
 export const revalidate = 60
 
