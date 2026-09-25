@@ -1,0 +1,28 @@
+// The Next app, built by @opennextjs/cloudflare. The indexer is a separate
+// Worker with its own config in worker/wrangler.jsonc.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "decdn-stats",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-09-20",
+  // global_fetch_strictly_public: getStats() fetches the indexer's
+  // workers.dev URL, which a Worker on the same account can't reach otherwise.
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+  "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "decdn-stats" }],
+  // ISR cache for the page's 60s revalidate (open-next.config.ts).
+  "r2_buckets": [
+    { "binding": "NEXT_INC_CACHE_R2_BUCKET", "bucket_name": "decdn-stats-cache" }
+  ],
+  "durable_objects": {
+    "bindings": [
+      { "name": "NEXT_CACHE_DO_QUEUE", "class_name": "DOQueueHandler" }
+    ]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["DOQueueHandler"] }],
+  // must match CHAIN_ID in worker/wrangler.jsonc. STATS_BASE_URL is set in the
+  // dashboard (the indexer's URL); keep_vars stops a deploy from wiping it.
+  "vars": { "CHAIN_ID": "421614" },
+  "keep_vars": true,
+  "observability": { "enabled": true }
+}

@@ -19,9 +19,14 @@ pnpm start      # next start (after build)
 pnpm lint       # eslint (flat config, next core-web-vitals + typescript)
 pnpm typecheck  # tsc --noEmit
 pnpm format     # prettier --write "**/*.{ts,tsx}"
+pnpm app:preview  # opennextjs-cloudflare build + preview (the page on workerd)
+pnpm app:deploy   # opennextjs-cloudflare build + deploy
+pnpm worker:deploy  # deploy the indexer (`run deploy` — bare `pnpm deploy` is pnpm's built-in)
 ```
 
 There is no test framework in this project — no test runner, config, or test files. Verify changes with `pnpm typecheck && pnpm lint` (plus `pnpm --filter @decdn/stats-worker typecheck` for the worker) and by looking at the running dev server. Local end-to-end for the indexer: `pnpm worker:dev`, `curl "http://localhost:8787/__scheduled?cron=*/10+*+*+*+*"`, then `pnpm dev` with `STATS_BASE_URL=http://localhost:8787` and `CHAIN_ID` in `.env` (see README).
+
+Cloudflare: the repo is two Workers — the page (`decdn-stats`, root `wrangler.jsonc`, built by `@opennextjs/cloudflare`; `open-next.config.ts` puts the ISR cache in the `decdn-stats-cache` R2 bucket) and the indexer (`decdn-stats-worker`, `worker/wrangler.jsonc`). `STATS_BASE_URL` is a dashboard var on the page Worker (`keep_vars` preserves it across deploys) and must also be a build variable. See README "Deploying to Cloudflare".
 
 Add shadcn/ui components with `npx shadcn@latest add <name>`; they land in `components/ui/`.
 

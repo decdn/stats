@@ -35,6 +35,17 @@ Each tick indexes at most `LOG_CHUNK_BLOCKS × MAX_CHUNKS_PER_RUN` blocks (see [
 
 Deploy with `pnpm worker:deploy` after `wrangler login`, `wrangler r2 bucket create decdn-stats`, and `wrangler secret put RPC_URL`.
 
+## Deploying to Cloudflare
+
+The repo deploys as two Workers, each with its own wrangler config. On Workers Builds that means two projects on the same repo, both with the repo root as root directory:
+
+| Worker | Config | Build command | Deploy command |
+| --- | --- | --- | --- |
+| `decdn-stats-worker` (indexer) | [`worker/wrangler.jsonc`](worker/wrangler.jsonc) | *(none)* | `pnpm worker:deploy` |
+| `decdn-stats` (the page) | [`wrangler.jsonc`](wrangler.jsonc) | `pnpm opennextjs-cloudflare build` | `pnpm opennextjs-cloudflare deploy` |
+
+Deploy the indexer first: it needs the `decdn-stats` R2 bucket and an `RPC_URL` secret. The page is built with [`@opennextjs/cloudflare`](https://opennext.js.org/cloudflare) and needs the `decdn-stats-cache` R2 bucket (`wrangler r2 bucket create decdn-stats-cache`), which holds the ISR cache behind its 60s revalidate ([`open-next.config.ts`](open-next.config.ts)). Set `STATS_BASE_URL` to the indexer's URL (`https://decdn-stats-worker.<subdomain>.workers.dev`) both as a build variable and as a runtime variable on the page's Worker; `CHAIN_ID` is in `wrangler.jsonc` but also needs to be a build variable so the prerendered page isn't "not configured" until its first revalidate. Locally, `pnpm app:preview` runs the built Worker and `pnpm app:deploy` deploys it.
+
 When the contracts are redeployed, update `FEE_ROUTER`, `CAPACITY_BOND`, `PAYMENT_POOL` and `START_BLOCK` in [`worker/wrangler.jsonc`](worker/wrangler.jsonc) (and `START_BLOCK` in `.env`). The addresses come from `decdn/contracts/deployments/421614.json`, but that file's `deployBlock` is an **L1** number — `START_BLOCK` must be the L2 block: take the earliest creation block of the three contracts from arbiscan, or the first L2 block whose `l1BlockNumber` ≥ `deployBlock`. The stats file records the deployment it was built from (chain, the three addresses, `START_BLOCK`), so the next tick notices the change and re-indexes from scratch over it. A stats file the worker can't read (bad JSON, or a shape from an older worker) is overwritten the same way. The rebuild takes several ticks, during which the cards show "catching up".
 
 ## Scripts
@@ -48,6 +59,8 @@ When the contracts are redeployed, update `FEE_ROUTER`, `CAPACITY_BOND`, `PAYMEN
 | `pnpm typecheck` | `tsc --noEmit`                  |
 | `pnpm format`    | Prettier over `**/*.{ts,tsx}`   |
 | `pnpm worker:dev`    | Run the indexer worker locally (`wrangler dev --test-scheduled`) |
+| `pnpm app:preview`   | Build the page with OpenNext and run it in workerd |
+| `pnpm app:deploy`    | Build and deploy the page to Cloudflare |
 | `pnpm worker:deploy` | Deploy the worker to Cloudflare |
 
 There is no test framework in this project. Verify changes with `pnpm typecheck && pnpm lint` and by looking at the running dev server.

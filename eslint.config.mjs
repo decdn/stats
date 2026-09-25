@@ -11,6 +11,7 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "build/**",
+    ".open-next/**",
     "next-env.d.ts",
     // Cloudflare worker has its own tsconfig; not part of the Next app.
     "worker/**",
