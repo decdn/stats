@@ -1,4 +1,4 @@
-import { getStats, type HourlyPoint, type Stats } from "@/lib/stats"
+import { getStats, type Stats } from "@/lib/stats"
 import { formatBytes, formatUsdcCents, scaleBytes } from "@/lib/utils"
 
 // The metric cards' view of stats.json: a headline, a rolling-24h change and
@@ -25,7 +25,7 @@ export type MetricView =
   // `staleSince` (unix seconds) is set when the worker hasn't written for a
   // while: the headline is still true as of then, the 24h change isn't.
   | { status: "ok"; metric: Metric; staleSince: number | null }
-  | { status: "unconfigured" | "unindexed" | "unsampled" }
+  | { status: "unconfigured" | "unindexed" }
   // Totals are partial and the hourly window is in the past (backfill,
   // re-index, outage recovery), so nothing is shown until it's caught up.
   | { status: "catching-up"; lastBlock: number }
@@ -35,7 +35,7 @@ const windowHours = 24
 const staleAfterMs = 30 * 60_000
 
 export async function loadMetric(
-  build: (stats: Stats) => Metric | null
+  build: (stats: Stats) => Metric
 ): Promise<MetricView> {
   const result = await getStats()
   if (result.status !== "ok") return { status: result.status }
@@ -43,9 +43,7 @@ export async function loadMetric(
   if (!stats.caughtUp) {
     return { status: "catching-up", lastBlock: stats.lastBlock }
   }
-  const metric = build(stats)
-  if (!metric) return { status: "unsampled" }
-  return { status: "ok", metric, staleSince: staleSince(stats) }
+  return { status: "ok", metric: build(stats), staleSince: staleSince(stats) }
 }
 
 // Unix seconds of the worker's last write when it has stopped writing, else
@@ -111,24 +109,20 @@ export function bytesServedMetric(stats: Stats): Metric {
   }
 }
 
-// null when none of the last 24 hourly buckets carries a sample (before the
-// first caught-up run, or after a re-index). The
-// series has only the sampled hours.
-export function activeNodesMetric(stats: Stats): Metric | null {
-  const sampled = stats.hourly
-    .slice(-windowHours)
-    .filter(
-      (point): point is HourlyPoint & { activeNodes: number } =>
-        point.activeNodes != null
+// The registered-set size now, with its end-of-hour count over the last 24
+// hours. The delta is null until the series reaches back 24 hours.
+export function registeredNodesMetric(stats: Stats): Metric {
+  const window = stats.hourly.slice(-windowHours)
+  const latest = window.at(-1)
+  const base =
+    latest &&
+    stats.hourly.find(
+      (point) => point.hour === hoursBefore(latest.hour, windowHours)
     )
-  const latest = sampled.at(-1)
-  if (!latest) return null
-  const base = stats.hourly.find(
-    (point) => point.hour === hoursBefore(latest.hour, windowHours)
-  )?.activeNodes
-  const change = base == null ? null : latest.activeNodes - base
+  const count = Object.keys(stats.nodes).length
+  const change = base ? count - base.registeredNodes : null
   return {
-    value: String(latest.activeNodes),
+    value: String(count),
     delta:
       change === null
         ? null
@@ -136,9 +130,9 @@ export function activeNodesMetric(stats: Stats): Metric | null {
             text: change < 0 ? `−${-change}` : `+${change}`,
             up: change > 0,
           },
-    series: sampled.map((point) => ({
+    series: window.map((point) => ({
       t: hourLabel(point.hour),
-      value: point.activeNodes,
+      value: point.registeredNodes,
     })),
   }
 }

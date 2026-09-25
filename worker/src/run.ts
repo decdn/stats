@@ -1,24 +1,21 @@
 import { createPublicClient, http } from "viem"
 
 import { parseConfig, type Env } from "./env"
-import { indexSettled } from "./indexer"
-import { countActiveNodes } from "./nodes"
+import { indexEvents } from "./indexer"
 import {
   applyEvents,
   emptyStats,
-  recordActiveNodes,
   resumeStats,
   serializeStats,
   trimStats,
+  type Deployment,
   type Hex,
 } from "./stats"
 import { statsStore } from "./store"
 
-// One cron tick: read the stats file, index up to MAX_CHUNKS_PER_RUN chunks past
-// lastBlock, sample the active-node count once caught up, write it back.
-// Nothing is written if indexing throws, so the next tick retries the same
-// range. A failed node sample doesn't hold settlements back: progress is
-// written first, then the error is rethrown so the cron still fails.
+// One cron tick: read the stats file, index up to MAX_CHUNKS_PER_RUN chunks
+// past lastBlock, write it back. Nothing is written if indexing throws, so the
+// next tick retries the same range.
 export async function runIndex(env: Env) {
   const config = parseConfig(env)
   const client = createPublicClient({
@@ -33,20 +30,21 @@ export async function runIndex(env: Env) {
   }
 
   const store = statsStore(env)
-  const fresh = emptyStats(
-    config.chainId,
-    config.feeRouter.toLowerCase() as Hex,
-    Number(config.startBlock),
-    config.capacityBond.toLowerCase() as Hex
-  )
+  const deployment: Deployment = {
+    chainId: config.chainId,
+    feeRouter: config.feeRouter.toLowerCase() as Hex,
+    capacityBond: config.capacityBond.toLowerCase() as Hex,
+    paymentPool: config.paymentPool.toLowerCase() as Hex,
+    startBlock: Number(config.startBlock),
+  }
   const existing = await store.get()
-  const resumed = existing === null ? null : resumeStats(existing, fresh)
+  const resumed = existing === null ? null : resumeStats(existing, deployment)
   if (existing !== null && resumed === null) {
     console.log(
       `${store.key} is unreadable or from another deployment; re-indexing from scratch`
     )
   }
-  const stats = resumed ?? fresh
+  const stats = resumed ?? emptyStats(deployment)
 
   const head = await client.getBlockNumber()
   // Stay behind the reorg/replica-lag window: logs are only fetched once, so
@@ -57,9 +55,9 @@ export async function runIndex(env: Env) {
   const to = cap < target ? cap : target
 
   if (from <= to) {
-    const events = await indexSettled(
+    const events = await indexEvents(
       client,
-      config.feeRouter,
+      config,
       from,
       to,
       config.logChunkBlocks
@@ -69,36 +67,11 @@ export async function runIndex(env: Env) {
   }
 
   stats.caughtUp = BigInt(stats.lastBlock) >= target
-  const now = Date.now() / 1000
-  let sampleError: unknown = null
-  if (stats.caughtUp) {
-    // Node count history can't be rebuilt from logs, so it's sampled live.
-    // Only once caught up: mid-backfill the hourly series still ends in the
-    // past, and a sample at "now" would zero-fill (then trim) hours whose
-    // events haven't been indexed yet. Read at `target` for the same
-    // replica-lag reason as the logs.
-    try {
-      const activeNodes = await countActiveNodes(
-        client,
-        config.capacityBond,
-        target
-      )
-      recordActiveNodes(stats, now, activeNodes)
-    } catch (err) {
-      // The hour keeps activeNodes: null, which the page shows as missing.
-      console.error(
-        `active-node sample failed (CapacityBond ${config.capacityBond} @ ${target})`,
-        err
-      )
-      sampleError = err
-    }
-  }
-  trimStats(stats, stats.caughtUp ? now : undefined)
+  trimStats(stats, stats.caughtUp ? Date.now() / 1000 : undefined)
   stats.updatedAt = new Date().toISOString()
 
   await store.put(serializeStats(stats))
   console.log(
-    `written to ${store.label}: lastBlock=${stats.lastBlock} head=${head} settlements=${stats.totals.settlementCount}${stats.caughtUp ? "" : " (catching up)"}`
+    `written to ${store.label}: lastBlock=${stats.lastBlock} head=${head} settlements=${stats.totals.settlementCount} nodes=${Object.keys(stats.nodes).length}${stats.caughtUp ? "" : " (catching up)"}`
   )
-  if (sampleError) throw sampleError
 }

@@ -1,12 +1,11 @@
-import { Badge } from "@/components/ui/badge"
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
 import {
   Table,
@@ -17,38 +16,78 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { networkTotals, regions } from "@/lib/mock"
-import { formatBytes } from "@/lib/utils"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import {
+  loadRegions,
+  UNKNOWN_REGION,
+  type RegionRow,
+  type RegionsView,
+} from "@/lib/regions"
+import { formatBytes, formatUtcTime } from "@/lib/utils"
 
 const headClassName =
   "font-mono text-[10px] tracking-wide text-muted-foreground uppercase sm:text-[11px] sm:tracking-widest"
 
-const countryNames: Record<string, string> = {
-  DE: "germany",
-  US: "united states",
-  FR: "france",
-  SG: "singapore",
-  NL: "netherlands",
-  GB: "united kingdom",
-  BR: "brazil",
-  JP: "japan",
-  ZA: "south africa",
+const cellClassName = "py-3 text-right font-mono tabular-nums"
+
+const countryNames = new Intl.DisplayNames(["en"], { type: "region" })
+
+function countryName(code: string) {
+  if (code === UNKNOWN_REGION) return "no valid region declared"
+  try {
+    return countryNames.of(code)?.toLowerCase() ?? ""
+  } catch {
+    return ""
+  }
 }
 
-export function ByRegion() {
+function emptyLabel(view: RegionsView) {
+  switch (view.status) {
+    case "unconfigured":
+      return "live data not configured"
+    case "catching-up":
+      return `catching up · block ${view.lastBlock}`
+    case "ok":
+      return "no nodes registered yet"
+    default:
+      return "not indexed yet"
+  }
+}
+
+// The figure with a small fill bar beside it. The bar is decorative; the
+// figure carries the value.
+function CacheHit({ row }: { row: RegionRow }) {
+  if (row.cacheHit === null) return <>—</>
+  const percent = row.cacheHit * 100
+  return (
+    <div className="flex items-center justify-end gap-2">
+      <Progress
+        value={percent}
+        aria-hidden
+        className="hidden w-12 sm:flex [&_[data-slot=progress-indicator]]:bg-accent-green/50 [&_[data-slot=progress-track]]:bg-muted-foreground/20"
+      />
+      <span className="w-14">{percent.toFixed(1)}%</span>
+    </div>
+  )
+}
+
+export async function ByRegion() {
+  const view = await loadRegions()
+  const rows = view.status === "ok" ? view.rows : []
   return (
     <Card className="[--card-spacing:--spacing(4)] sm:[--card-spacing:--spacing(6)]">
       <CardHeader>
         <CardTitle>regional breakdown</CardTitle>
         <CardDescription>
-          per-region delivery quality — illustrative figures, not yet read from
-          chain
+          registered nodes and settled bytes by declared region, read from chain
+          {view.status === "ok" && view.staleSince !== null && (
+            <> · as of {formatUtcTime(view.staleSince)} utc</>
+          )}
         </CardDescription>
-        <CardAction>
-          <Badge variant="outline" className="font-mono text-muted-foreground">
-            sample data
-          </Badge>
-        </CardAction>
       </CardHeader>
       <CardContent className="gap-5">
         <Table>
@@ -61,72 +100,85 @@ export function ByRegion() {
                 nodes
               </TableHead>
               <TableHead className={`${headClassName} text-right`}>
-                bytes
+                bytes served
               </TableHead>
               <TableHead className={`${headClassName} text-right`}>
-                cache hit
-              </TableHead>
-              <TableHead className={`${headClassName} text-right`}>
-                p95 fill
+                <Tooltip>
+                  <TooltipTrigger className="cursor-help uppercase underline decoration-dotted underline-offset-4">
+                    cache hit
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-64 normal-case">
+                    share of settled bytes the region&apos;s nodes served
+                    without paying a peer to pull them. pulls from a
+                    publisher&apos;s origin are free, so they don&apos;t count
+                    as misses.
+                  </TooltipContent>
+                </Tooltip>
               </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {regions.map((region) => (
+            {rows.length === 0 && (
+              <TableRow>
+                <TableCell
+                  colSpan={4}
+                  className="py-8 text-center font-mono text-muted-foreground lowercase"
+                >
+                  {emptyLabel(view)}
+                </TableCell>
+              </TableRow>
+            )}
+            {rows.map((region) => (
               <TableRow key={region.code}>
                 <TableCell className="py-3">
                   <div className="flex items-baseline gap-2">
                     <span className="font-mono font-semibold">
-                      {region.code}
+                      {region.code === UNKNOWN_REGION ? "??" : region.code}
                     </span>
                     <span className="hidden text-xs text-muted-foreground sm:inline">
-                      {countryNames[region.code]}
+                      {countryName(region.code)}
                     </span>
                   </div>
                 </TableCell>
-                <TableCell className="hidden py-3 text-right font-mono tabular-nums sm:table-cell">
+                <TableCell className={`hidden sm:table-cell ${cellClassName}`}>
                   {region.nodes}
                 </TableCell>
-                <TableCell className="py-3 text-right font-mono tabular-nums">
-                  {formatBytes(region.bytes)}
+                <TableCell className={cellClassName}>
+                  {formatBytes(Number(region.bytesServed))}
                 </TableCell>
-                <TableCell className="py-3 text-right font-mono tabular-nums">
-                  {region.cacheHitPct.toFixed(1)}%
-                </TableCell>
-                <TableCell className="py-3 text-right font-mono tabular-nums">
-                  {region.p95Ms} ms
+                <TableCell className={cellClassName}>
+                  <CacheHit row={region} />
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
-          <TableFooter className="bg-transparent text-muted-foreground">
-            <TableRow className="hover:bg-transparent">
-              <TableCell className={`${headClassName} py-3`}>network</TableCell>
-              <TableCell className="hidden py-3 text-right font-mono tabular-nums sm:table-cell">
-                {networkTotals.nodes}
-              </TableCell>
-              <TableCell className="py-3 text-right font-mono tabular-nums">
-                {formatBytes(networkTotals.bytes)}
-              </TableCell>
-              <TableCell className="py-3 text-right font-mono tabular-nums">
-                {networkTotals.cacheHitPct.toFixed(1)}%
-              </TableCell>
-              <TableCell className="py-3 text-right font-mono tabular-nums">
-                {networkTotals.p95Ms} ms
-              </TableCell>
-            </TableRow>
-          </TableFooter>
+          {view.status === "ok" && rows.length > 0 && (
+            <TableFooter className="bg-transparent text-muted-foreground">
+              <TableRow className="hover:bg-transparent">
+                <TableCell className={`${headClassName} py-3`}>
+                  network
+                </TableCell>
+                <TableCell className={`hidden sm:table-cell ${cellClassName}`}>
+                  {view.network.nodes}
+                </TableCell>
+                <TableCell className={cellClassName}>
+                  {formatBytes(Number(view.network.bytesServed))}
+                </TableCell>
+                <TableCell className={cellClassName}>
+                  <CacheHit row={view.network} />
+                </TableCell>
+              </TableRow>
+            </TableFooter>
+          )}
         </Table>
         <Separator />
         <p className="max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
           <strong className="font-semibold text-foreground">
-            region is self-attested:
+            regions are declared by operators
           </strong>{" "}
-          each operator declares its country on{" "}
-          <span className="font-mono">CapacityBond</span>, and nothing checks
-          it. cache hit and p95 will come from node-to-node fills settled
-          through <span className="font-mono">FeeRouter</span>, bucketed by the
-          pulling node&apos;s region.
+          on <span className="font-mono">CapacityBond</span>. peers measure each
+          node&apos;s latency and rank down one that doesn&apos;t match its
+          region.
         </p>
       </CardContent>
     </Card>

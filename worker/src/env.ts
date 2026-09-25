@@ -7,6 +7,7 @@ export type Env = {
   CHAIN_ID: string
   FEE_ROUTER: string
   CAPACITY_BOND: string
+  PAYMENT_POOL: string
   LOG_CHUNK_BLOCKS: string
   MAX_CHUNKS_PER_RUN: string
   CONFIRMATIONS: string
@@ -23,6 +24,7 @@ export type Config = {
   chainId: number
   feeRouter: Address
   capacityBond: Address
+  paymentPool: Address
   logChunkBlocks: bigint
   maxChunksPerRun: number
   confirmations: bigint
@@ -44,24 +46,27 @@ function positiveInt(env: Env, key: keyof Env) {
   return raw
 }
 
+function address(env: Env, key: keyof Env): Address {
+  const raw = env[key]
+  if (typeof raw !== "string" || !isAddress(raw)) {
+    throw new Error(`${key} is not an address: ${String(raw)}`)
+  }
+  return raw
+}
+
 export function parseChainId(env: Env) {
   return Number(int(env, "CHAIN_ID"))
 }
 
 export function parseConfig(env: Env): Config {
   if (!env.RPC_URL) throw new Error("RPC_URL is not set")
-  if (!isAddress(env.FEE_ROUTER)) {
-    throw new Error(`FEE_ROUTER is not an address: ${env.FEE_ROUTER}`)
-  }
-  if (!isAddress(env.CAPACITY_BOND)) {
-    throw new Error(`CAPACITY_BOND is not an address: ${env.CAPACITY_BOND}`)
-  }
   return {
     rpcUrl: env.RPC_URL,
     startBlock: BigInt(int(env, "START_BLOCK")),
     chainId: parseChainId(env),
-    feeRouter: env.FEE_ROUTER,
-    capacityBond: env.CAPACITY_BOND,
+    feeRouter: address(env, "FEE_ROUTER"),
+    capacityBond: address(env, "CAPACITY_BOND"),
+    paymentPool: address(env, "PAYMENT_POOL"),
     logChunkBlocks: BigInt(positiveInt(env, "LOG_CHUNK_BLOCKS")),
     maxChunksPerRun: Number(positiveInt(env, "MAX_CHUNKS_PER_RUN")),
     confirmations: BigInt(int(env, "CONFIRMATIONS")),

@@ -1,6 +1,6 @@
 import { ByRegion } from "@/blocks/by-region"
 import { Hero } from "@/blocks/hero"
-import { MetricActiveNodes } from "@/blocks/metric-active-nodes"
+import { MetricRegisteredNodes } from "@/blocks/metric-registered-nodes"
 import { MetricBytesServed } from "@/blocks/metric-bytes-served"
 import { MetricValueSettled } from "@/blocks/metric-value-settled"
 import { SettlementsTable } from "@/blocks/settlements-table"
@@ -25,9 +25,12 @@ export default function Page() {
         <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <MetricValueSettled />
           <MetricBytesServed />
-          <MetricActiveNodes />
+          <MetricRegisteredNodes />
         </section>
-        <SectionDivider left="by region" right="delivery quality" />
+        <SectionDivider
+          left="by region"
+          right="source: CapacityBond · FeeRouter · PaymentPool"
+        />
         <ByRegion />
         <SectionDivider left="settlements" right="source: FeeRouter" />
         <SettlementsTable />
