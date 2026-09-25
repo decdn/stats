@@ -39,8 +39,8 @@ export type StatsResult =
   // judged against it, so a page whose refreshes fail still flags old data.
   | { status: "ok"; stats: Stats; checkedAt: number }
   // The bucket has no usable stats file yet: nothing written (pre-first-tick
-  // bootstrap; seen only if the 404 carries CORS headers, else it's an
-  // error), or the file predates the current schema and the cron's next tick
+  // bootstrap; R2 sends the CORS headers on the 404 too, so the page can read
+  // it), or the file predates the current schema and the cron's next tick
   // re-indexes over it. An expected state, distinct from a broken read.
   | { status: "unindexed" }
   // The first fetch failed (network, CORS, timeout, a non-404 error, a body
