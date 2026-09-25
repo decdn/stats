@@ -29,5 +29,22 @@
     "MAX_CHUNKS_PER_RUN": "20",
     "CONFIRMATIONS": "1200"
   },
+  // Branch Previews (`wrangler preview`, Workers Builds' non-production
+  // deploy) inherit no vars or bindings and run no cron, so a Preview is just
+  // the page: CHAIN_ID and the two buckets it reads. Both are production's on
+  // purpose — the page only reads STATS, and cache keys are prefixed by build
+  // ID. WORKER_SELF_REFERENCE is left out: a Preview's service binding calls
+  // production, not the Preview, so there the memory queue skips ISR
+  // revalidation.
+  "previews": {
+    "vars": { "CHAIN_ID": "421614" },
+    "r2_buckets": [
+      {
+        "binding": "NEXT_INC_CACHE_R2_BUCKET",
+        "bucket_name": "decdn-stats-cache"
+      },
+      { "binding": "STATS", "bucket_name": "decdn-stats" }
+    ]
+  },
   "observability": { "enabled": true }
 }
