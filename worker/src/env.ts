@@ -44,6 +44,10 @@ function positiveInt(env: Env, key: keyof Env) {
   return raw
 }
 
+export function parseChainId(env: Env) {
+  return Number(int(env, "CHAIN_ID"))
+}
+
 export function parseConfig(env: Env): Config {
   if (!env.RPC_URL) throw new Error("RPC_URL is not set")
   if (!isAddress(env.FEE_ROUTER)) {
@@ -55,7 +59,7 @@ export function parseConfig(env: Env): Config {
   return {
     rpcUrl: env.RPC_URL,
     startBlock: BigInt(int(env, "START_BLOCK")),
-    chainId: Number(int(env, "CHAIN_ID")),
+    chainId: parseChainId(env),
     feeRouter: env.FEE_ROUTER,
     capacityBond: env.CAPACITY_BOND,
     logChunkBlocks: BigInt(positiveInt(env, "LOG_CHUNK_BLOCKS")),

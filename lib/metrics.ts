@@ -106,7 +106,7 @@ export function bytesServedMetric(stats: Stats): Metric {
 }
 
 // null when none of the last 24 hourly buckets carries a sample (before the
-// first caught-up run, or after a re-index or CapacityBond change). The
+// first caught-up run, or after a re-index). The
 // series has only the sampled hours.
 export function activeNodesMetric(stats: Stats): Metric | null {
   const sampled = stats.hourly
