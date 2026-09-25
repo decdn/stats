@@ -1,62 +1,89 @@
-import { getStats } from "@/lib/stats"
-import { cn, formatUtcTime } from "@/lib/utils"
+import { getStats, type Stats } from "@/lib/stats"
+import { cn, formatBytes, formatUsdc, formatUtcTime } from "@/lib/utils"
+
+const explorerUrl = "https://sepolia.arbiscan.io"
+
+// A network with no settlement in this long isn't "on" in any sense a
+// reader would check.
+const quietAfterSeconds = 24 * 60 * 60
+
+type LastSettlement = {
+  when: string
+  value: string
+  bytes: string
+  txHref: string
+}
 
 type HeroState = {
   headline: string
   live: boolean
   meta: string
+  last: LastSettlement | null
 }
 
-// The headline is about the network, not the indexer. stats.json going stale
-// or catching up means the worker (or the public RPC it reads) is lagging —
-// a rate limit or a blip — which says nothing about whether nodes are
-// serving, so index health only ever shows in the meta line. The headline
-// changes only when there's no indexed data to stand on at all.
+// The headline is backed by the newest settlement, measured against the
+// worker's last write rather than the wall clock: a stale stats.json means
+// the worker (or the public RPC it reads) is lagging, which says nothing
+// about whether nodes are serving, so index health only ever shows in the
+// meta line. Mid-backfill the newest indexed settlement isn't the newest on
+// chain, so the headline stays neutral until the index catches up.
 async function loadHeroState(): Promise<HeroState> {
   const result = await getStats()
   if (result.status === "unconfigured") {
-    return {
-      headline: "network status",
-      live: false,
-      meta: "live data not configured",
-    }
+    return neutral("live data not configured")
   }
   if (result.status === "unindexed") {
-    return {
-      headline: "network status",
-      live: false,
-      meta: "waiting for the first index",
-    }
+    return neutral("waiting for the first index")
   }
   const { stats } = result
+  if (!stats.caughtUp) {
+    return neutral(`indexing · block ${stats.lastBlock}`)
+  }
+  const indexedAt = Date.parse(stats.updatedAt) / 1000
+  const latest = stats.settlements.at(0)
+  const live =
+    latest !== undefined &&
+    (Number.isNaN(indexedAt) ||
+      indexedAt - latest.timestamp <= quietAfterSeconds)
   return {
-    headline: "the network is on",
-    live: true,
-    meta: stats.caughtUp
-      ? indexedMeta(stats.updatedAt)
-      : `indexing · block ${stats.lastBlock}`,
+    headline: live ? "the network is on" : "the network is quiet",
+    live,
+    meta: Number.isNaN(indexedAt)
+      ? "indexed"
+      : `indexed ${formatUtcTime(indexedAt)} utc`,
+    last: latest ? lastSettlement(latest, indexedAt) : null,
   }
 }
 
-// formatUtcTime throws on an invalid date, and the meta line isn't worth
-// failing the page over.
-function indexedMeta(updatedAt: string) {
-  const ms = Date.parse(updatedAt)
-  return Number.isNaN(ms)
-    ? "indexed"
-    : `indexed ${formatUtcTime(ms / 1000)} utc`
+function neutral(meta: string): HeroState {
+  return { headline: "network status", live: false, meta, last: null }
+}
+
+// Time only when it's the same UTC day as the index, else date and time.
+function lastSettlement(
+  row: Stats["settlements"][number],
+  indexedAt: number
+): LastSettlement {
+  const at = formatUtcTime(row.timestamp)
+  const sameDay =
+    !Number.isNaN(indexedAt) &&
+    formatUtcTime(indexedAt).startsWith(at.slice(0, 10))
+  return {
+    when: sameDay ? at.slice(11) : at,
+    value: formatUsdc(row.amount),
+    bytes: formatBytes(Number(row.bytesDelivered)),
+    txHref: `${explorerUrl}/tx/${row.txHash}`,
+  }
 }
 
 export async function Hero() {
-  const { headline, live, meta } = await loadHeroState()
+  const { headline, live, meta, last } = await loadHeroState()
   return (
-    <section>
-      <div className="border-t border-border" />
-      <div className="flex items-center justify-between gap-4 pt-3 font-mono text-[10px] tracking-wide text-muted-foreground uppercase sm:text-[11px] sm:tracking-widest">
-        <span className="whitespace-nowrap">arbitrum sepolia</span>
-        <span className="truncate">{meta}</span>
-      </div>
-      <h1 className="mt-10 text-5xl leading-[1.05] font-medium tracking-tight lowercase sm:text-6xl md:text-7xl">
+    <section className="pt-6">
+      <p className="font-mono text-[11px] tracking-widest text-muted-foreground uppercase">
+        {meta}
+      </p>
+      <h1 className="mt-6 text-5xl leading-[1.05] font-medium tracking-tight text-balance lowercase sm:text-6xl md:text-7xl">
         {headline}
         <span
           aria-hidden="true"
@@ -67,15 +94,24 @@ export async function Hero() {
         />
         <span className="sr-only">.</span>
       </h1>
-      <p className="mt-8 max-w-[65ch] text-base leading-relaxed text-muted-foreground lowercase">
-        every headline figure below is{" "}
-        <strong className="font-semibold text-foreground">
-          raw on-chain state
-        </strong>{" "}
-        read from arbitrum sepolia — nothing annualized, projected, or invented.
-        value settled, bytes served and registered nodes are the three numbers
-        no operator can fake. verify any settlement yourself on the block
-        explorer.
+      {last && (
+        <p className="mt-6 text-lg leading-snug tabular-nums sm:text-xl">
+          last settlement at {last.when} utc paid {last.value} usdc for{" "}
+          {last.bytes} served.{" "}
+          <a
+            href={last.txHref}
+            target="_blank"
+            rel="noreferrer"
+            className="whitespace-nowrap text-muted-foreground underline underline-offset-4 hover:text-foreground"
+          >
+            check the tx<span aria-hidden="true"> ↗</span>
+          </a>
+        </p>
+      )}
+      <p className="mt-4 max-w-[60ch] text-base leading-relaxed text-muted-foreground">
+        you don&apos;t have to trust us. every figure below is read from
+        contract logs on arbitrum sepolia, nothing annualized or projected, and
+        every settlement links to its transaction.
       </p>
     </section>
   )

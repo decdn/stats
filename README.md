@@ -72,7 +72,7 @@ There is no test framework in this project. Verify changes with `pnpm typecheck 
 ```
 app/            layout, globals.css, and page.tsx — the only composition point
 blocks/         page sections (hero, metric-*, by-region, settlements); charts/ holds the metric cards' client charts
-globals/        chrome reused across sections (Header, Footer, SectionDivider)
+globals/        chrome reused across sections (Header, Footer, SectionHeading)
 components/ui/  unmodified shadcn/ui primitives
 lib/stats.ts    getStats() — reads stats-<CHAIN_ID>.json from the STATS bucket
 worker/src/     the Worker entry and the indexer (cron → R2)

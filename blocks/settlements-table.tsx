@@ -6,6 +6,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { SectionHeading } from "@/globals/SectionHeading/section-heading"
 import { getStats } from "@/lib/stats"
 import {
   formatBytes,
@@ -37,6 +38,7 @@ type TableData = {
   // Distinguishes the honest empty states: live data not wired up vs an
   // indexed chain with no settlements (yet).
   emptyLabel: string
+  // Set mid-backfill only; a caught-up index's time is in the hero.
   footer: string | null
 }
 
@@ -62,7 +64,7 @@ async function loadSettlements(): Promise<TableData> {
       return {
         key: `${row.txHash}:${row.logIndex}`,
         date,
-        time: time.slice(0, 5),
+        time,
         operator: truncateHex(row.operator),
         operatorHref: `${explorerUrl}/address/${row.operator}`,
         bytes: formatBytes(Number(row.bytesDelivered)),
@@ -74,14 +76,12 @@ async function loadSettlements(): Promise<TableData> {
     emptyLabel: "no settlements indexed yet",
     // Mid-backfill the rows are real but not the newest, so say so rather
     // than implying a fresh index.
-    footer: stats.caughtUp
-      ? `last indexed ${formatUtcTime(Date.parse(stats.updatedAt) / 1000)} utc`
-      : `re-indexing · block ${stats.lastBlock}`,
+    footer: stats.caughtUp ? null : `re-indexing · block ${stats.lastBlock}`,
   }
 }
 
 const headClassName =
-  "font-mono text-[10px] tracking-wide text-muted-foreground uppercase sm:text-[11px] sm:tracking-widest"
+  "font-mono text-[11px] tracking-widest text-muted-foreground uppercase"
 
 const linkClassName = "underline-offset-4 hover:underline"
 
@@ -100,16 +100,10 @@ export async function SettlementsTable() {
   const { rows: settlements, emptyLabel, footer } = await loadSettlements()
   return (
     <section className="flex w-full flex-col gap-5">
-      <div>
-        <h2 className="text-2xl font-medium tracking-tight lowercase sm:text-3xl">
-          the point is you don&apos;t have to trust us
-        </h2>
-        <p className="mt-2 max-w-[65ch] text-sm leading-relaxed text-muted-foreground lowercase">
-          each settlement is a real{" "}
-          <span className="font-mono normal-case">FeeRouter.Settled</span> log
-          on arbitrum sepolia. click a tx to check it.
-        </p>
-      </div>
+      <SectionHeading title="latest settlements">
+        each row is a <span className="font-mono">FeeRouter.Settled</span> log
+        on arbitrum sepolia. click a tx to check it.
+      </SectionHeading>
       <Table className="font-mono">
         <TableHeader>
           <TableRow>
@@ -186,7 +180,7 @@ export async function SettlementsTable() {
         </TableBody>
       </Table>
       {footer !== null && (
-        <p className="font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
+        <p className="font-mono text-[11px] tracking-widest text-muted-foreground uppercase">
           {footer}
         </p>
       )}

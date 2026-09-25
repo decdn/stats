@@ -15,9 +15,10 @@ export function scaleBytes(bytes: number) {
   return { value, unit: byteUnits[unit], divisor: 1000 ** unit }
 }
 
+// Whole bytes stay whole: "0 B", not "0.0 B".
 export function formatBytes(bytes: number) {
   const { value, unit } = scaleBytes(bytes)
-  return `${value.toFixed(1)} ${unit}`
+  return `${value.toFixed(unit === "B" ? 0 : 1)} ${unit}`
 }
 
 // 6-decimal USDC base units → "0.318204", without going through a float.
@@ -40,7 +41,8 @@ export function truncateHex(hex: string, lead = 6, tail = 4) {
   return `${hex.slice(0, lead)}…${hex.slice(-tail)}`
 }
 
-// unix seconds → "2026-09-08 14:12:07" (UTC)
+// unix seconds → "2026-09-08 14:12" (UTC). Minutes, not seconds: the
+// indexer runs every 10 minutes, so seconds are false precision.
 export function formatUtcTime(timestamp: number) {
-  return new Date(timestamp * 1000).toISOString().slice(0, 19).replace("T", " ")
+  return new Date(timestamp * 1000).toISOString().slice(0, 16).replace("T", " ")
 }
