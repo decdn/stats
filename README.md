@@ -42,7 +42,7 @@ Each tick indexes at most `LOG_CHUNK_BLOCKS × MAX_CHUNKS_PER_RUN` blocks (see [
 
 The repo is one Worker, `stats`, configured in [`wrangler.jsonc`](wrangler.jsonc). Its entry, [`worker/src/index.ts`](worker/src/index.ts), wraps the `fetch` handler that [`@opennextjs/cloudflare`](https://opennext.js.org/cloudflare) generates into `.open-next/worker.js` and adds the `scheduled` handler: every 10 minutes the cron indexes the chain into the `decdn-stats` R2 bucket (binding `STATS`), which the page reads directly.
 
-On Workers Builds it's one project with the repo root as root directory and the defaults: build command `pnpm run build`, deploy command `npx wrangler deploy`, non-production branch deploy command `npx wrangler versions upload`. The Worker name in the dashboard must match `name` in `wrangler.jsonc`, or the build fails. `pnpm build` is the OpenNext build (it runs `next build` itself, via `buildCommand` in [`open-next.config.ts`](open-next.config.ts)). Keep the Worker free of Durable Object migrations: `wrangler versions upload` refuses to apply them — hence the in-memory revalidation queue.
+On Workers Builds it's one project with the repo root as root directory and the defaults: build command `pnpm run build`, deploy command `npx wrangler deploy`, non-production branch deploy command `npx wrangler preview`. A Preview inherits no vars or bindings, so the `previews` block in [`wrangler.jsonc`](wrangler.jsonc) redeclares what the page reads — `CHAIN_ID` and the two production buckets — and nothing else: no cron runs there, and ISR doesn't revalidate (its self-reference binding would call production). Change `CHAIN_ID` in both places. The Worker name in the dashboard must match `name` in `wrangler.jsonc`, or the build fails. `pnpm build` is the OpenNext build (it runs `next build` itself, via `buildCommand` in [`open-next.config.ts`](open-next.config.ts)). Keep the Worker free of Durable Object migrations: `wrangler versions upload` refuses to apply them — hence the in-memory revalidation queue.
 
 Before the first deploy: `wrangler r2 bucket create decdn-stats` and `wrangler secret put RPC_URL`. The ISR cache (the page's 60s revalidate) lives in the `decdn-stats-cache` R2 bucket, which `wrangler deploy` creates if it's missing. Locally, `pnpm app:preview` runs the built Worker in workerd — after `pnpm build`, `npx wrangler dev --test-scheduled` does the same and fires the cron on `curl "http://localhost:8787/__scheduled?cron=*/10+*+*+*+*"` — and `pnpm app:deploy` deploys it (also pre-filling the R2 cache, which `wrangler deploy` leaves to the first request).
 
@@ -50,20 +50,22 @@ When the contracts are redeployed, update `FEE_ROUTER`, `CAPACITY_BOND`, `PAYMEN
 
 ## Scripts
 
-| Command          | What it does                    |
-| ---------------- | ------------------------------- |
-| `pnpm dev`       | Start the dev server            |
-| `pnpm build`     | Production build (OpenNext, for Cloudflare) |
-| `pnpm start`     | Serve the production build      |
-| `pnpm lint`      | ESLint (next core-web-vitals)   |
-| `pnpm typecheck` | `tsc --noEmit`                  |
-| `pnpm format`    | Prettier over `**/*.{ts,tsx}`   |
-| `pnpm index`       | Run one indexer tick into the local (or `.env`-configured) bucket |
+| Command            | What it does                                                                                            |
+| ------------------ | ------------------------------------------------------------------------------------------------------- |
+| `pnpm dev`         | Start the dev server                                                                                    |
+| `pnpm build`       | Production build (OpenNext, for Cloudflare)                                                             |
+| `pnpm start`       | Serve the production build                                                                              |
+| `pnpm lint`        | ESLint (next core-web-vitals)                                                                           |
+| `pnpm typecheck`   | `tsc --noEmit`                                                                                          |
+| `pnpm format`      | Prettier over ts/tsx/js/json/css/md/yaml                                                                |
+| `pnpm index`       | Run one indexer tick into the local (or `.env`-configured) bucket                                       |
 | `pnpm cf-typegen`  | Generate `cloudflare-env.d.ts` from `wrangler.jsonc` (gitignored; `build` and `typecheck` run it first) |
-| `pnpm app:preview` | Build with OpenNext and run the Worker in workerd |
-| `pnpm app:deploy`  | Build and deploy the Worker to Cloudflare |
+| `pnpm app:preview` | Build with OpenNext and run the Worker in workerd                                                       |
+| `pnpm app:deploy`  | Build and deploy the Worker to Cloudflare                                                               |
 
 There is no test framework in this project. Verify changes with `pnpm typecheck && pnpm lint` and by looking at the running dev server.
+
+`pnpm install` also installs husky git hooks: `pre-commit` runs lint-staged (ESLint + Prettier on staged files) and `commit-msg` checks the message against Conventional Commits with commitlint.
 
 ## Project layout
 
@@ -80,7 +82,7 @@ lib/regions.ts  stats file → by-region rows (nodes, bytes, cache hit)
 
 Two rules explain most of the structure:
 
-- **Figures and copy are separated.** `lib/metrics.ts` and `lib/regions.ts` hold only values and statuses (`Metric`, `MetricView`, `RegionRow`, `RegionsView`); even empty-state labels live in the blocks. Headlines, labels, and prose are hardcoded in the block that renders them — so changing what the page *says* means editing that block, not the data file.
+- **Figures and copy are separated.** `lib/metrics.ts` and `lib/regions.ts` hold only values and statuses (`Metric`, `MetricView`, `RegionRow`, `RegionsView`); even empty-state labels live in the blocks. Headlines, labels, and prose are hardcoded in the block that renders them — so changing what the page _says_ means editing that block, not the data file.
 - **Blocks take no props and own no layout.** Each section's entry component takes no props and loads its own figures; only the `charts/metric-*-chart.tsx` client halves receive `series` from their server block. `app/page.tsx` assembles them and owns all page-level layout (the `max-w-6xl` container, the metrics grid).
 
 The three metric cards are deliberately separate files rather than one parameterized component: each owns its own `ChartConfig`, gradient `id`, and Y-domain math. Each is an async server component (`metric-*.tsx`, awaits `getStats()`) paired with a `"use client"` chart (`charts/metric-*-chart.tsx`) because of recharts; the rest are server components.
@@ -92,7 +94,7 @@ The three metric cards are deliberately separate files rather than one parameter
 - Visual voice: lowercase copy, `font-mono` uppercase micro-labels with wide tracking for metadata, `tabular-nums` for figures.
 - Import paths use the `@/*` alias rooted at the project directory.
 - Prettier: no semicolons, double quotes, 2-space indent, 80 columns, with `prettier-plugin-tailwindcss` sorting classes.
-- Commits follow Conventional Commits (`feat:`, `fix:`, `refactor:`, `chore:`).
+- Commits follow Conventional Commits (`feat:`, `fix:`, `refactor:`, `chore:`), enforced by the `commit-msg` hook.
 
 ## Adding UI components
 

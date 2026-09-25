@@ -3,6 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 <!-- BEGIN:nextjs-agent-rules -->
+
 # This is NOT the Next.js you know
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
@@ -18,7 +19,7 @@ pnpm build      # cf-typegen, then opennextjs-cloudflare build (runs next build 
 pnpm start      # next start (after build)
 pnpm lint       # eslint (flat config, next core-web-vitals + typescript)
 pnpm typecheck  # wrangler types (cf-typegen → cloudflare-env.d.ts), then tsc --noEmit — the file is gitignored, so build and typecheck both generate it first
-pnpm format     # prettier --write "**/*.{ts,tsx}"
+pnpm format     # prettier --write over ts/tsx/js/json/css/md/yaml
 pnpm index        # one indexer tick (worker/src/tick.ts) into the local, or .env-configured, bucket
 pnpm app:preview  # opennextjs-cloudflare build + preview (the Worker on workerd)
 pnpm app:deploy   # opennextjs-cloudflare build + deploy
@@ -26,7 +27,9 @@ pnpm app:deploy   # opennextjs-cloudflare build + deploy
 
 There is no test framework in this project — no test runner, config, or test files. Verify changes with `pnpm typecheck && pnpm lint` (both cover `worker/`) and by looking at the running dev server. Local end-to-end for the indexer: `RPC_URL` in `.env`, `pnpm index` (repeat until caught up), then `pnpm dev` — both get the Worker's bindings and vars from `wrangler.jsonc` + `.env` via wrangler's `getPlatformProxy` (`next.config.ts` calls `initOpenNextCloudflareForDev`) and share the emulated bucket in `.wrangler/state` (see README).
 
-Cloudflare: the repo is one Worker, `stats`, configured by the root `wrangler.jsonc`. Its `main` is `worker/src/index.ts`, which wraps the `fetch` handler `@opennextjs/cloudflare` generates in `.open-next/worker.js` (hence the `@ts-ignore` on that import: the file exists only after a build) and adds the cron's `scheduled` handler. `open-next.config.ts` puts the ISR cache in the `decdn-stats-cache` R2 bucket, with an in-memory queue because `wrangler versions upload` — the preview-branch deploy — rejects Durable Object migrations. It deploys with the Workers Builds defaults (`pnpm run build`, `npx wrangler deploy`); `RPC_URL` is a Worker secret. See README "Deploying to Cloudflare".
+Git hooks (husky, installed by `pnpm install` via `prepare`): `pre-commit` runs lint-staged — `eslint --fix` + `prettier --write` on staged JS/TS, `prettier --write` on staged json/md/css/yaml; `commit-msg` runs commitlint (`@commitlint/config-conventional`). Typecheck is deliberately not in the hook (whole-project, and it regenerates `cloudflare-env.d.ts`).
+
+Cloudflare: the repo is one Worker, `stats`, configured by the root `wrangler.jsonc`. Its `main` is `worker/src/index.ts`, which wraps the `fetch` handler `@opennextjs/cloudflare` generates in `.open-next/worker.js` (hence the `@ts-ignore` on that import: the file exists only after a build) and adds the cron's `scheduled` handler. `open-next.config.ts` puts the ISR cache in the `decdn-stats-cache` R2 bucket, with an in-memory queue because `wrangler versions upload` rejects Durable Object migrations. It deploys with the Workers Builds defaults (`pnpm run build`, `npx wrangler deploy`); `RPC_URL` is a Worker secret. Non-production branches deploy with `npx wrangler preview`, which inherits no vars or bindings: `wrangler.jsonc` `previews` redeclares only what the page reads (`CHAIN_ID`, the two production buckets), so a Preview runs no cron and never revalidates ISR. See README "Deploying to Cloudflare".
 
 Add shadcn/ui components with `npx shadcn@latest add <name>`; they land in `components/ui/`.
 
@@ -39,7 +42,7 @@ Single-page Next.js App Router status dashboard ("network status") that presents
 
 The layering that matters:
 
-- **Copy lives in blocks.** `lib/metrics.ts` and `lib/regions.ts` return figures and statuses only; headlines, labels, captions, micro-labels, and prose are hardcoded in the block that renders them, so changing what the page *says* means editing that block.
+- **Copy lives in blocks.** `lib/metrics.ts` and `lib/regions.ts` return figures and statuses only; headlines, labels, captions, micro-labels, and prose are hardcoded in the block that renders them, so changing what the page _says_ means editing that block.
 - **`blocks/` — page sections.** One entry file per section (`hero`, `metric-*`, `by-region`, `settlements-table`), each a zero-prop exported component that owns its own copy and awaits `getStats()` as an async server component (`by-region` via `loadRegions`; `hero`, whose meta line shows index freshness — the headline deliberately ignores it, since a stale index means a lagging worker or RPC, not a down network; `metric-*` via `loadMetric`; `settlements-table`). The three metric cards are deliberately separate files rather than one parameterized component: each server block `metric-*.tsx` is paired with its own `"use client"` `charts/metric-*-chart.tsx` that owns its `ChartConfig`, gradient `id`, and Y-domain math.
 - **`globals/<Name>/` — chrome reused across sections** (`Header`, `Footer`, `SectionDivider`). `SiteHeader` is a static wordmark; `SiteFooter` is an async server component that links the indexed `feeRouter`/`capacityBond` from `getStats()`.
 - **`app/page.tsx` — the only composition point.** It assembles blocks and owns all page-level layout (`max-w-6xl` container, the metrics grid). Blocks do not lay themselves out relative to each other.
@@ -53,4 +56,4 @@ The layering that matters:
 - Visual voice: lowercase copy, `font-mono` uppercase micro-labels with wide tracking for metadata, `tabular-nums` for figures.
 - `lib/utils.ts` re-exports `cn` from the `cn` package and holds the display formatters (`scaleBytes`/`formatBytes` pick a base-1000 unit for a raw byte count; `formatUsdc`/`formatUsdcCents` do bigint-safe 6-decimal USDC). Import paths use the `@/*` alias rooted at the project directory.
 - Prettier: no semicolons, double quotes, 2-space indent, 80 columns, with `prettier-plugin-tailwindcss` sorting classes.
-- Commits follow Conventional Commits (`feat:`, `fix:`, `refactor:`, `chore:`).
+- Commits follow Conventional Commits (`feat:`, `fix:`, `refactor:`, `chore:`), enforced by the `commit-msg` hook.
