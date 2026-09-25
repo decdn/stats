@@ -29,14 +29,22 @@ async function loadHeroState(): Promise<HeroState> {
     }
   }
   const { stats } = result
-  const updatedAt = formatUtcTime(Date.parse(stats.updatedAt) / 1000)
   return {
     headline: "the network is on",
     live: true,
     meta: stats.caughtUp
-      ? `indexed ${updatedAt} utc`
+      ? indexedMeta(stats.updatedAt)
       : `indexing · block ${stats.lastBlock}`,
   }
+}
+
+// formatUtcTime throws on an invalid date, and the meta line isn't worth
+// failing the page over.
+function indexedMeta(updatedAt: string) {
+  const ms = Date.parse(updatedAt)
+  return Number.isNaN(ms)
+    ? "indexed"
+    : `indexed ${formatUtcTime(ms / 1000)} utc`
 }
 
 export async function Hero() {
