@@ -5,7 +5,7 @@ export function SiteHeader() {
         href="https://decdn.org"
         className="font-medium tracking-tight underline-offset-4 hover:underline"
       >
-        decdn
+        decdn<span className="text-whisper">_</span>
       </a>
       <span className="text-sm text-muted-foreground">network status</span>
     </header>
