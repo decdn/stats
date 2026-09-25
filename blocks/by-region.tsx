@@ -160,15 +160,11 @@ export async function ByRegion() {
         <Separator />
         <p className="max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
           <strong className="font-semibold text-foreground">
-            region is self-attested:
+            regions are declared by operators
           </strong>{" "}
-          each operator declares its country on{" "}
-          <span className="font-mono">CapacityBond</span>, and nothing checks
-          it. bytes are <span className="font-mono">FeeRouter.Settled</span> by
-          the operator&apos;s region; cache hit subtracts what its nodes paid
-          peers for, from{" "}
-          <span className="font-mono">PaymentPool.PoolRedeemed</span> on pools
-          they own.
+          on <span className="font-mono">CapacityBond</span>. peers measure each
+          node&apos;s latency and rank down one that doesn&apos;t match its
+          region.
         </p>
       </CardContent>
     </Card>
