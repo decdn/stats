@@ -48,7 +48,7 @@ When the contracts are redeployed, update `FEE_ROUTER`, `CAPACITY_BOND`, `PAYMEN
 | `pnpm typecheck` | `tsc --noEmit`                  |
 | `pnpm format`    | Prettier over `**/*.{ts,tsx}`   |
 | `pnpm index`       | Run one indexer tick into the local (or `.env`-configured) bucket |
-| `pnpm cf-typegen`  | Generate `cloudflare-env.d.ts` from `wrangler.jsonc` (runs before `typecheck`) |
+| `pnpm cf-typegen`  | Generate `cloudflare-env.d.ts` from `wrangler.jsonc` (gitignored; `build` and `typecheck` run it first) |
 | `pnpm app:preview` | Build with OpenNext and run the Worker in workerd |
 | `pnpm app:deploy`  | Build and deploy the Worker to Cloudflare |
 

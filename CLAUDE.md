@@ -14,10 +14,10 @@ Package manager is **pnpm** (see `pnpm-workspace.yaml`, `pnpm-lock.yaml`).
 
 ```bash
 pnpm dev        # next dev
-pnpm build      # opennextjs-cloudflare build (runs next build itself, see open-next.config.ts)
+pnpm build      # cf-typegen, then opennextjs-cloudflare build (runs next build itself, see open-next.config.ts)
 pnpm start      # next start (after build)
 pnpm lint       # eslint (flat config, next core-web-vitals + typescript)
-pnpm typecheck  # wrangler types (cf-typegen → cloudflare-env.d.ts), then tsc --noEmit
+pnpm typecheck  # wrangler types (cf-typegen → cloudflare-env.d.ts), then tsc --noEmit — the file is gitignored, so build and typecheck both generate it first
 pnpm format     # prettier --write "**/*.{ts,tsx}"
 pnpm index        # one indexer tick (worker/src/tick.ts) into the local, or .env-configured, bucket
 pnpm app:preview  # opennextjs-cloudflare build + preview (the Worker on workerd)

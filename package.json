@@ -5,10 +5,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "opennextjs-cloudflare build",
+    "build": "pnpm cf-typegen && opennextjs-cloudflare build",
     "start": "next start",
-    "app:preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "app:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "app:preview": "pnpm build && opennextjs-cloudflare preview",
+    "app:deploy": "pnpm build && opennextjs-cloudflare deploy",
     "lint": "eslint",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit",
