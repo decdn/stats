@@ -1,6 +1,6 @@
 import type { Env } from "./env"
 import { runIndex } from "./run"
-import { statsStore } from "./store"
+import { statsKey, statsStore } from "./store"
 
 export default {
   // Awaited (not waitUntil) so a failed run marks the cron invocation as
@@ -15,11 +15,12 @@ export default {
   // prod if the bucket itself isn't made public.
   async fetch(request, env) {
     try {
-      const store = statsStore(env)
+      const key = statsKey(env)
       const url = new URL(request.url)
-      if (request.method !== "GET" || url.pathname !== `/${store.key}`) {
+      if (request.method !== "GET" || url.pathname !== `/${key}`) {
         return new Response("not found", { status: 404 })
       }
+      const store = statsStore(env)
       const body = await store.get()
       if (body === null) {
         return new Response(`${store.key} not indexed yet`, { status: 404 })
