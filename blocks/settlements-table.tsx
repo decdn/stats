@@ -14,19 +14,22 @@ import {
   truncateHex,
 } from "@/lib/utils"
 
-const explorerTxUrl = "https://sepolia.arbiscan.io/tx/"
+const explorerUrl = "https://sepolia.arbiscan.io"
 // stats.json carries the newest RECENT_SETTLEMENTS rows (worker/src/stats.ts);
 // the page shows the newest few.
 const visibleRows = 12
 
 type Row = {
   key: string
+  // UTC date, the group a row sits under.
+  date: string
   time: string
   operator: string
+  operatorHref: string
   bytes: string
   value: string
   tx: string
-  href: string
+  txHref: string
 }
 
 type TableData = {
@@ -54,15 +57,20 @@ async function loadSettlements(): Promise<TableData> {
   }
   const { stats } = result
   return {
-    rows: stats.settlements.slice(0, visibleRows).map((row) => ({
-      key: `${row.txHash}:${row.logIndex}`,
-      time: formatUtcTime(row.timestamp),
-      operator: truncateHex(row.operator),
-      bytes: formatBytes(Number(row.bytesDelivered)),
-      value: formatUsdc(row.amount),
-      tx: truncateHex(row.txHash, 8),
-      href: `${explorerTxUrl}${row.txHash}`,
-    })),
+    rows: stats.settlements.slice(0, visibleRows).map((row) => {
+      const [date, time] = formatUtcTime(row.timestamp).split(" ")
+      return {
+        key: `${row.txHash}:${row.logIndex}`,
+        date,
+        time: time.slice(0, 5),
+        operator: truncateHex(row.operator),
+        operatorHref: `${explorerUrl}/address/${row.operator}`,
+        bytes: formatBytes(Number(row.bytesDelivered)),
+        value: formatUsdc(row.amount),
+        tx: truncateHex(row.txHash, 8),
+        txHref: `${explorerUrl}/tx/${row.txHash}`,
+      }
+    }),
     emptyLabel: "no settlements indexed yet",
     // Mid-backfill the rows are real but not the newest, so say so rather
     // than implying a fresh index.
@@ -74,6 +82,19 @@ async function loadSettlements(): Promise<TableData> {
 
 const headClassName =
   "font-mono text-[10px] tracking-wide text-muted-foreground uppercase sm:text-[11px] sm:tracking-widest"
+
+const linkClassName = "underline-offset-4 hover:underline"
+
+// Rows arrive newest first, so each date's rows are contiguous.
+function groupByDate(rows: Row[]) {
+  const groups: { date: string; rows: Row[] }[] = []
+  for (const row of rows) {
+    const last = groups.at(-1)
+    if (last?.date === row.date) last.rows.push(row)
+    else groups.push({ date: row.date, rows: [row] })
+  }
+  return groups
+}
 
 export async function SettlementsTable() {
   const { rows: settlements, emptyLabel, footer } = await loadSettlements()
@@ -92,13 +113,17 @@ export async function SettlementsTable() {
       <Table className="font-mono">
         <TableHeader>
           <TableRow>
-            <TableHead className={headClassName}>time</TableHead>
-            <TableHead className={headClassName}>operator</TableHead>
-            <TableHead className={`${headClassName} text-right`}>
+            <TableHead className={headClassName}>time (utc)</TableHead>
+            <TableHead className={`${headClassName} hidden sm:table-cell`}>
+              operator
+            </TableHead>
+            <TableHead
+              className={`${headClassName} hidden text-right sm:table-cell`}
+            >
               bytes
             </TableHead>
             <TableHead className={`${headClassName} text-right`}>
-              value (testnet-usdc)
+              value (usdc)
             </TableHead>
             <TableHead className={`${headClassName} text-right`}>tx</TableHead>
           </TableRow>
@@ -114,31 +139,50 @@ export async function SettlementsTable() {
               </TableCell>
             </TableRow>
           )}
-          {settlements.map((settlement) => (
-            <TableRow key={settlement.key}>
-              <TableCell className="text-muted-foreground tabular-nums">
-                {settlement.time}
+          {groupByDate(settlements).map((group) => [
+            <TableRow key={group.date} className="hover:bg-transparent">
+              <TableCell
+                colSpan={5}
+                className="pt-5 pb-2 text-xs text-muted-foreground"
+              >
+                {group.date}
               </TableCell>
-              <TableCell>{settlement.operator}</TableCell>
-              <TableCell className="text-right tabular-nums">
-                {settlement.bytes}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {settlement.value}
-              </TableCell>
-              <TableCell className="text-right">
-                <a
-                  href={settlement.href}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-accent-green underline underline-offset-4"
-                >
-                  {settlement.tx}
-                  <span aria-hidden="true"> ↗</span>
-                </a>
-              </TableCell>
-            </TableRow>
-          ))}
+            </TableRow>,
+            ...group.rows.map((settlement) => (
+              <TableRow key={settlement.key}>
+                <TableCell className="text-muted-foreground tabular-nums">
+                  {settlement.time}
+                </TableCell>
+                <TableCell className="hidden sm:table-cell">
+                  <a
+                    href={settlement.operatorHref}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={linkClassName}
+                  >
+                    {settlement.operator}
+                  </a>
+                </TableCell>
+                <TableCell className="hidden text-right tabular-nums sm:table-cell">
+                  {settlement.bytes}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {settlement.value}
+                </TableCell>
+                <TableCell className="text-right">
+                  <a
+                    href={settlement.txHref}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={linkClassName}
+                  >
+                    {settlement.tx}
+                    <span aria-hidden="true"> ↗</span>
+                  </a>
+                </TableCell>
+              </TableRow>
+            )),
+          ])}
         </TableBody>
       </Table>
       {footer !== null && (

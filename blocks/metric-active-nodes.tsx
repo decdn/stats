@@ -1,7 +1,6 @@
 import { ActiveNodesChart } from "@/blocks/charts/metric-active-nodes-chart"
 import {
   Card,
-  CardAction,
   CardContent,
   CardFooter,
   CardHeader,
@@ -30,15 +29,7 @@ export async function MetricActiveNodes() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-mono text-[11px] font-normal tracking-widest text-muted-foreground uppercase">
-          active nodes
-        </CardTitle>
-        <CardAction>
-          <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 font-mono text-[10px] text-muted-foreground ring-1 ring-foreground/10">
-            <span className="size-1.5 rounded-full bg-accent-green" />
-            on-chain
-          </span>
-        </CardAction>
+        <CardTitle className="font-medium">registered nodes</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="flex items-baseline gap-1.5">
@@ -46,7 +37,7 @@ export async function MetricActiveNodes() {
             {metric?.value ?? "—"}
           </span>
         </div>
-        <p className="text-sm text-muted-foreground">bonded &amp; serving</p>
+        <p className="text-sm text-muted-foreground">bonded on CapacityBond</p>
         {metric?.delta && staleSince === null && (
           <p className="text-sm">
             <span

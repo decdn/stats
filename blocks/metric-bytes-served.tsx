@@ -1,7 +1,6 @@
 import { BytesServedChart } from "@/blocks/charts/metric-bytes-served-chart"
 import {
   Card,
-  CardAction,
   CardContent,
   CardFooter,
   CardHeader,
@@ -28,15 +27,7 @@ export async function MetricBytesServed() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-mono text-[11px] font-normal tracking-widest text-muted-foreground uppercase">
-          bytes served
-        </CardTitle>
-        <CardAction>
-          <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 font-mono text-[10px] text-muted-foreground ring-1 ring-foreground/10">
-            <span className="size-1.5 rounded-full bg-accent-green" />
-            on-chain
-          </span>
-        </CardAction>
+        <CardTitle className="font-medium">bytes served</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="flex items-baseline gap-1.5">
