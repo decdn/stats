@@ -1,0 +1,59 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    # Pin the title convention instead of leaving it to Dependabot's inference
+    # from commit history: "chore(deps): ..." / "chore(deps-dev): ...", matching
+    # the Conventional Commits the commit-msg hook enforces locally.
+    commit-message:
+      prefix: chore
+      include: scope
+    # Hold new releases for a week before proposing them, so a compromised npm
+    # publish has time to be caught and yanked. Security updates bypass this.
+    cooldown:
+      default-days: 7
+    groups:
+      # Coupled sets come first so they claim their packages before the
+      # catch-alls below. They omit `update-types` so a major bump moves the
+      # whole set in one PR instead of splitting into mismatched ones.
+      next:
+        patterns:
+          - "next"
+          - "eslint-config-next"
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+      cloudflare:
+        patterns:
+          - "@opennextjs/cloudflare"
+          - "wrangler"
+      tailwind:
+        patterns:
+          - "tailwindcss"
+          - "@tailwindcss/*"
+      commitlint:
+        patterns:
+          - "@commitlint/*"
+      production-dependencies:
+        dependency-type: production
+        update-types: ["minor", "patch"]
+      development-dependencies:
+        dependency-type: development
+        update-types: ["minor", "patch"]
+    ignore:
+      # eslint-config-next@16 pulls in eslint-plugin-react@7.37, which only
+      # peers eslint ^9 and crashes on v10 (context.getFilename() removed).
+      # Unblock when Next ships an eslint-plugin-react that supports v10.
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      # Tracks the Node runtime in package.json `engines`, not the latest Node
+      # major; bump it by hand together with `engines`.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
