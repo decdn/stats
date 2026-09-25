@@ -50,18 +50,18 @@ When the contracts are redeployed, update `FEE_ROUTER`, `CAPACITY_BOND`, `PAYMEN
 
 ## Scripts
 
-| Command          | What it does                    |
-| ---------------- | ------------------------------- |
-| `pnpm dev`       | Start the dev server            |
-| `pnpm build`     | Production build (OpenNext, for Cloudflare) |
-| `pnpm start`     | Serve the production build      |
-| `pnpm lint`      | ESLint (next core-web-vitals)   |
-| `pnpm typecheck` | `tsc --noEmit`                  |
-| `pnpm format`    | Prettier over `**/*.{ts,tsx}`   |
-| `pnpm index`       | Run one indexer tick into the local (or `.env`-configured) bucket |
+| Command            | What it does                                                                                            |
+| ------------------ | ------------------------------------------------------------------------------------------------------- |
+| `pnpm dev`         | Start the dev server                                                                                    |
+| `pnpm build`       | Production build (OpenNext, for Cloudflare)                                                             |
+| `pnpm start`       | Serve the production build                                                                              |
+| `pnpm lint`        | ESLint (next core-web-vitals)                                                                           |
+| `pnpm typecheck`   | `tsc --noEmit`                                                                                          |
+| `pnpm format`      | Prettier over `**/*.{ts,tsx}`                                                                           |
+| `pnpm index`       | Run one indexer tick into the local (or `.env`-configured) bucket                                       |
 | `pnpm cf-typegen`  | Generate `cloudflare-env.d.ts` from `wrangler.jsonc` (gitignored; `build` and `typecheck` run it first) |
-| `pnpm app:preview` | Build with OpenNext and run the Worker in workerd |
-| `pnpm app:deploy`  | Build and deploy the Worker to Cloudflare |
+| `pnpm app:preview` | Build with OpenNext and run the Worker in workerd                                                       |
+| `pnpm app:deploy`  | Build and deploy the Worker to Cloudflare                                                               |
 
 There is no test framework in this project. Verify changes with `pnpm typecheck && pnpm lint` and by looking at the running dev server.
 
@@ -80,7 +80,7 @@ lib/regions.ts  stats file → by-region rows (nodes, bytes, cache hit)
 
 Two rules explain most of the structure:
 
-- **Figures and copy are separated.** `lib/metrics.ts` and `lib/regions.ts` hold only values and statuses (`Metric`, `MetricView`, `RegionRow`, `RegionsView`); even empty-state labels live in the blocks. Headlines, labels, and prose are hardcoded in the block that renders them — so changing what the page *says* means editing that block, not the data file.
+- **Figures and copy are separated.** `lib/metrics.ts` and `lib/regions.ts` hold only values and statuses (`Metric`, `MetricView`, `RegionRow`, `RegionsView`); even empty-state labels live in the blocks. Headlines, labels, and prose are hardcoded in the block that renders them — so changing what the page _says_ means editing that block, not the data file.
 - **Blocks take no props and own no layout.** Each section's entry component takes no props and loads its own figures; only the `charts/metric-*-chart.tsx` client halves receive `series` from their server block. `app/page.tsx` assembles them and owns all page-level layout (the `max-w-6xl` container, the metrics grid).
 
 The three metric cards are deliberately separate files rather than one parameterized component: each owns its own `ChartConfig`, gradient `id`, and Y-domain math. Each is an async server component (`metric-*.tsx`, awaits `getStats()`) paired with a `"use client"` chart (`charts/metric-*-chart.tsx`) because of recharts; the rest are server components.

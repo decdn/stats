@@ -3,6 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 <!-- BEGIN:nextjs-agent-rules -->
+
 # This is NOT the Next.js you know
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
@@ -39,7 +40,7 @@ Single-page Next.js App Router status dashboard ("network status") that presents
 
 The layering that matters:
 
-- **Copy lives in blocks.** `lib/metrics.ts` and `lib/regions.ts` return figures and statuses only; headlines, labels, captions, micro-labels, and prose are hardcoded in the block that renders them, so changing what the page *says* means editing that block.
+- **Copy lives in blocks.** `lib/metrics.ts` and `lib/regions.ts` return figures and statuses only; headlines, labels, captions, micro-labels, and prose are hardcoded in the block that renders them, so changing what the page _says_ means editing that block.
 - **`blocks/` — page sections.** One entry file per section (`hero`, `metric-*`, `by-region`, `settlements-table`), each a zero-prop exported component that owns its own copy and awaits `getStats()` as an async server component (`by-region` via `loadRegions`; `hero`, whose meta line shows index freshness — the headline deliberately ignores it, since a stale index means a lagging worker or RPC, not a down network; `metric-*` via `loadMetric`; `settlements-table`). The three metric cards are deliberately separate files rather than one parameterized component: each server block `metric-*.tsx` is paired with its own `"use client"` `charts/metric-*-chart.tsx` that owns its `ChartConfig`, gradient `id`, and Y-domain math.
 - **`globals/<Name>/` — chrome reused across sections** (`Header`, `Footer`, `SectionDivider`). `SiteHeader` is a static wordmark; `SiteFooter` is an async server component that links the indexed `feeRouter`/`capacityBond` from `getStats()`.
 - **`app/page.tsx` — the only composition point.** It assembles blocks and owns all page-level layout (`max-w-6xl` container, the metrics grid). Blocks do not lay themselves out relative to each other.
