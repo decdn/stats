@@ -7,9 +7,21 @@ const httpMetadata = {
   cacheControl: "public, max-age=60",
 }
 
+// What the store needs from the Worker env — the page passes its own env
+// (CloudflareEnv), which carries these but not the indexer's config.
+export type StoreEnv = Pick<
+  Env,
+  | "STATS"
+  | "CHAIN_ID"
+  | "R2_ACCESS_KEY_ID"
+  | "R2_SECRET_ACCESS_KEY"
+  | "R2_S3_ENDPOINT"
+  | "R2_BUCKET"
+>
+
 // One file per chain, so switching CHAIN_ID never overwrites another chain's
 // history.
-export function statsKey(env: Env) {
+export function statsKey(env: StoreEnv) {
   return `stats-${parseChainId(env)}.json`
 }
 
@@ -25,7 +37,7 @@ export type StatsStore = {
   put(body: string): Promise<void>
 }
 
-export function statsStore(env: Env): StatsStore {
+export function statsStore(env: StoreEnv): StatsStore {
   const key = statsKey(env)
   if (env.R2_ACCESS_KEY_ID) return s3Store(env, key)
   if (!env.STATS) {
@@ -50,7 +62,7 @@ function bindingStore(bucket: R2Bucket, key: string): StatsStore {
   }
 }
 
-function s3Store(env: Env, key: string): StatsStore {
+function s3Store(env: StoreEnv, key: string): StatsStore {
   for (const name of [
     "R2_SECRET_ACCESS_KEY",
     "R2_S3_ENDPOINT",

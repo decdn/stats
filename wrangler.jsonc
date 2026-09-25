@@ -1,23 +1,33 @@
-// The Next app, built by @opennextjs/cloudflare. The indexer is a separate
-// Worker with its own config in worker/wrangler.jsonc.
+// One Worker: the Next app (built by @opennextjs/cloudflare) serves the page,
+// and the cron in worker/src/index.ts indexes the chain into the STATS bucket
+// the page reads.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "stats",
-  "main": ".open-next/worker.js",
+  // wraps the generated .open-next/worker.js and adds the scheduled handler
+  "main": "worker/src/index.ts",
   "compatibility_date": "2026-09-20",
-  // global_fetch_strictly_public: getStats() fetches the indexer's
-  // workers.dev URL, which a Worker on the same account can't reach otherwise.
-  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "compatibility_flags": ["nodejs_compat"],
   "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
   "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "stats" }],
-  // ISR cache for the page's 60s revalidate (open-next.config.ts). Deploys
-  // create the bucket if it's missing.
+  "triggers": { "crons": ["*/10 * * * *"] },
   "r2_buckets": [
-    { "binding": "NEXT_INC_CACHE_R2_BUCKET", "bucket_name": "decdn-stats-cache" }
+    // ISR cache for the page's 60s revalidate (open-next.config.ts). Deploys
+    // create the bucket if it's missing.
+    { "binding": "NEXT_INC_CACHE_R2_BUCKET", "bucket_name": "decdn-stats-cache" },
+    // stats-<CHAIN_ID>.json: written by the cron, read by the page
+    { "binding": "STATS", "bucket_name": "decdn-stats" }
   ],
-  // must match CHAIN_ID in worker/wrangler.jsonc. STATS_BASE_URL is set in the
-  // dashboard (the indexer's URL); keep_vars stops a deploy from wiping it.
-  "vars": { "CHAIN_ID": "421614" },
-  "keep_vars": true,
+  // RPC_URL is a secret (`wrangler secret put RPC_URL`; `.env` locally).
+  "vars": {
+    "CHAIN_ID": "421614",
+    "FEE_ROUTER": "0xe0510f9350ef9D34E576ccf4d9043f1FC30cf17D",
+    "START_BLOCK": "310903026",
+    "CAPACITY_BOND": "0x65a9e38F41B9bE2fcB97950a0E3c33e506E6E353",
+    "PAYMENT_POOL": "0x351E5544471e11638b89DF8E3A3299c28E00cEc3",
+    "LOG_CHUNK_BLOCKS": "10000",
+    "MAX_CHUNKS_PER_RUN": "20",
+    "CONFIRMATIONS": "1200"
+  },
   "observability": { "enabled": true }
 }

@@ -8,8 +8,8 @@ import { SiteFooter } from "@/globals/Footer/site-footer"
 import { SiteHeader } from "@/globals/Header/site-header"
 import { SectionDivider } from "@/globals/SectionDivider/section-divider"
 
-// Route-level ISR: keeps the page regenerating even when STATS_BASE_URL is unset
-// at build time (no fetch, so no fetch-level revalidate signal exists).
+// Route-level ISR: getStats() reads R2 rather than fetching, so there is no
+// fetch-level revalidate signal — this is the only one.
 export const revalidate = 60
 
 export default function Page() {
