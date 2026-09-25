@@ -27,7 +27,10 @@ export default function Page() {
           <MetricBytesServed />
           <MetricRegisteredNodes />
         </section>
-        <SectionDivider left="by region" right="delivery quality" />
+        <SectionDivider
+          left="by region"
+          right="source: CapacityBond · FeeRouter · PaymentPool"
+        />
         <ByRegion />
         <SectionDivider left="settlements" right="source: FeeRouter" />
         <SettlementsTable />
