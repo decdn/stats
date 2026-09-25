@@ -85,6 +85,11 @@ export function emptyStats(
   }
 }
 
+// A bigint in base units, as stored: a decimal string BigInt() accepts.
+function isUint(value: unknown) {
+  return typeof value === "string" && /^\d+$/.test(value)
+}
+
 // Returns the stored stats when they can be extended: valid JSON of the
 // expected shape, built from the same deployment as `fresh`. Anything else
 // returns null and the caller re-indexes from scratch over it.
@@ -103,7 +108,9 @@ export function resumeStats(json: string, fresh: Stats): Stats | null {
     !Array.isArray(stats.settlements) ||
     typeof stats.lastBlock !== "number" ||
     typeof stats.caughtUp !== "boolean" ||
-    !stats.totals ||
+    !isUint(stats.totals?.valueSettled) ||
+    !isUint(stats.totals?.bytesServed) ||
+    typeof stats.totals?.settlementCount !== "number" ||
     stats.chainId !== fresh.chainId ||
     stats.feeRouter !== fresh.feeRouter ||
     stats.startBlock !== fresh.startBlock ||
@@ -173,7 +180,7 @@ function bucket<P>(points: P[], buckets: Buckets<P>, key: string): P {
     // (recordActiveNodes) and an event mined up to CONFIRMATIONS blocks
     // (~5 min) plus a cron interval earlier lands on the next run.
     const front: P[] = []
-    for (let cursor = key; cursor < buckets.key(first); ) {
+    for (let cursor = key; cursor < buckets.key(first);) {
       front.push(buckets.empty(cursor))
       cursor = buckets.next(cursor)
     }
