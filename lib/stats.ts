@@ -1,6 +1,6 @@
 import { cache } from "react"
 
-import type { Stats } from "@/worker/src/stats"
+import { parseStats, type Stats } from "@/worker/src/stats"
 
 export type {
   DailyPoint,
@@ -14,8 +14,10 @@ export type StatsResult =
   // STATS_BASE_URL or CHAIN_ID is unset — a cold checkout. The page renders,
   // but the live sections must say "not configured", never a fake empty chain.
   | { status: "unconfigured" }
-  // The worker answered 404: the bucket has no stats file yet (pre-first-tick
-  // bootstrap). An expected state, distinct from a broken fetch.
+  // The bucket has no usable stats file yet: the worker answered 404
+  // (pre-first-tick bootstrap), or the file predates the current schema and
+  // the worker's next tick re-indexes over it. An expected state, distinct
+  // from a broken fetch.
   | { status: "unindexed" }
 
 // Reads `${STATS_BASE_URL}/stats-${CHAIN_ID}.json`, the file the worker
@@ -39,7 +41,11 @@ export const getStats = cache(async (): Promise<StatsResult> => {
       `stats fetch failed: ${res.status} ${res.statusText} (${url})`
     )
   }
-  const stats = (await res.json()) as Stats
+  const stats = parseStats(await res.text())
+  if (!stats) {
+    console.warn(`${url} does not match the current stats schema`)
+    return { status: "unindexed" }
+  }
   if (String(stats.chainId) !== chainId) {
     throw new Error(`${url} is for chain ${stats.chainId}, expected ${chainId}`)
   }

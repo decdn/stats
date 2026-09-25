@@ -134,10 +134,10 @@ function isRecord(value: unknown) {
   return typeof value === "object" && value !== null && !Array.isArray(value)
 }
 
-// Returns the stored stats when they can be extended: valid JSON of the
-// expected shape, built from the same deployment as `fresh`. Anything else
-// returns null and the caller re-indexes from scratch over it.
-export function resumeStats(json: string, fresh: Deployment): Stats | null {
+// Returns the stored stats when they are valid JSON of the expected shape,
+// otherwise null. Shared by the worker and the page, so both reject a file
+// written under an older schema.
+export function parseStats(json: string): Stats | null {
   let stats: Stats | null
   try {
     stats = JSON.parse(json) as Stats | null
@@ -158,7 +158,20 @@ export function resumeStats(json: string, fresh: Deployment): Stats | null {
     stats.hourly.some((point) => typeof point.registeredNodes !== "number") ||
     !isRecord(stats.nodes) ||
     !isRecord(stats.poolOwners) ||
-    !isRecord(stats.regions) ||
+    !isRecord(stats.regions)
+  ) {
+    return null
+  }
+  return stats
+}
+
+// Returns the stored stats when they can be extended: parseable by
+// `parseStats` and built from the same deployment as `fresh`. Anything else
+// returns null and the caller re-indexes from scratch over it.
+export function resumeStats(json: string, fresh: Deployment): Stats | null {
+  const stats = parseStats(json)
+  if (
+    !stats ||
     stats.chainId !== fresh.chainId ||
     stats.feeRouter !== fresh.feeRouter ||
     stats.capacityBond !== fresh.capacityBond ||
