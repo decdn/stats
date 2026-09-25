@@ -1,53 +1,50 @@
-import { staleSince } from "@/lib/metrics"
 import { getStats } from "@/lib/stats"
 import { cn, formatUtcTime } from "@/lib/utils"
 
 type HeroState = {
   headline: string
-  // the green square only ever sits next to a healthy, current index.
   live: boolean
   meta: string
 }
 
-// The headline is the page's one claim about the network, so it comes from
-// the same status the metric cards use rather than being fixed copy.
+// The headline is about the network, not the indexer. stats.json going stale
+// or catching up means the worker (or the public RPC it reads) is lagging —
+// a rate limit or a blip — which says nothing about whether nodes are
+// serving, so index health only ever shows in the meta line. The headline
+// changes only when there's no indexed data to stand on at all.
 async function loadHeroState(): Promise<HeroState> {
   const result = await getStats()
   if (result.status === "unconfigured") {
     return {
-      headline: "not connected",
+      headline: "network status",
       live: false,
       meta: "live data not configured",
     }
   }
   if (result.status === "unindexed") {
     return {
-      headline: "waiting for the first index",
+      headline: "network status",
       live: false,
-      meta: "no stats written yet",
+      meta: "waiting for the first index",
     }
   }
   const { stats } = result
-  if (!stats.caughtUp) {
-    return {
-      headline: "catching up",
-      live: false,
-      meta: `indexing · block ${stats.lastBlock}`,
-    }
-  }
-  const stale = staleSince(stats)
-  if (stale !== null) {
-    return {
-      headline: "the index has stalled",
-      live: false,
-      meta: `last indexed ${formatUtcTime(stale)} utc`,
-    }
-  }
   return {
     headline: "the network is on",
     live: true,
-    meta: `indexed ${formatUtcTime(Date.parse(stats.updatedAt) / 1000)} utc`,
+    meta: stats.caughtUp
+      ? indexedMeta(stats.updatedAt)
+      : `indexing · block ${stats.lastBlock}`,
   }
+}
+
+// formatUtcTime throws on an invalid date, and the meta line isn't worth
+// failing the page over.
+function indexedMeta(updatedAt: string) {
+  const ms = Date.parse(updatedAt)
+  return Number.isNaN(ms)
+    ? "indexed"
+    : `indexed ${formatUtcTime(ms / 1000)} utc`
 }
 
 export async function Hero() {
