@@ -30,7 +30,7 @@ export type Config = {
   confirmations: bigint
 }
 
-function int(env: Env, key: keyof Env) {
+function int<K extends keyof Env>(env: Pick<Env, K>, key: K) {
   const raw = env[key]
   if (typeof raw !== "string" || !/^\d+$/.test(raw)) {
     throw new Error(`${key} must be a non-negative integer, got ${String(raw)}`)
@@ -40,7 +40,7 @@ function int(env: Env, key: keyof Env) {
 
 // Zero would make the indexer compute an empty range forever and silently
 // never advance, so the chunk sizing vars must be strictly positive.
-function positiveInt(env: Env, key: keyof Env) {
+function positiveInt<K extends keyof Env>(env: Pick<Env, K>, key: K) {
   const raw = int(env, key)
   if (BigInt(raw) === 0n) throw new Error(`${key} must be greater than zero`)
   return raw
@@ -54,7 +54,7 @@ function address(env: Env, key: keyof Env): Address {
   return raw
 }
 
-export function parseChainId(env: Env) {
+export function parseChainId(env: Pick<Env, "CHAIN_ID">) {
   return Number(int(env, "CHAIN_ID"))
 }
 
