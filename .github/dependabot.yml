@@ -30,10 +30,6 @@ updates:
           - "react-dom"
           - "@types/react"
           - "@types/react-dom"
-      cloudflare:
-        patterns:
-          - "@opennextjs/cloudflare"
-          - "wrangler"
       tailwind:
         patterns:
           - "tailwindcss"

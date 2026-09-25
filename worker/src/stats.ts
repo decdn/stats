@@ -1,5 +1,6 @@
 // The shape of stats.json on R2, plus the pure functions that build it.
-// No I/O here — the Next app imports the types from this file.
+// No I/O or runtime dependencies here: the page bundles this file into the
+// browser for its types, asStats and UNKNOWN_REGION.
 
 export const DAILY_RETENTION_DAYS = 92
 // 24 buckets for the page's rolling-24h window, plus the hour before it so
@@ -135,15 +136,22 @@ function isRecord(value: unknown) {
 }
 
 // Returns the stored stats when they are valid JSON of the expected shape,
-// otherwise null. Shared by the worker and the page, so both reject a file
-// written under an older schema.
+// otherwise null.
 export function parseStats(json: string): Stats | null {
-  let stats: Stats | null
+  let value: unknown
   try {
-    stats = JSON.parse(json) as Stats | null
+    value = JSON.parse(json)
   } catch {
     return null
   }
+  return asStats(value)
+}
+
+// Returns already-parsed JSON as stats when it has the expected shape,
+// otherwise null. Shared by the worker (via parseStats) and the page, so both
+// reject a file written under an older schema.
+export function asStats(value: unknown): Stats | null {
+  const stats = value as Stats | null
   if (
     !stats ||
     typeof stats !== "object" ||
@@ -158,6 +166,7 @@ export function parseStats(json: string): Stats | null {
     typeof stats.lastBlock !== "number" ||
     typeof stats.caughtUp !== "boolean" ||
     typeof stats.updatedAt !== "string" ||
+    Number.isNaN(Date.parse(stats.updatedAt)) ||
     !isUint(stats.totals?.valueSettled) ||
     !isUint(stats.totals?.bytesServed) ||
     typeof stats.totals?.settlementCount !== "number" ||

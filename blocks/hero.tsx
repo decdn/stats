@@ -1,4 +1,6 @@
-import { getStats } from "@/lib/stats"
+"use client"
+
+import { useStats, type StatsResult } from "@/lib/stats"
 import { cn, formatUtcTime } from "@/lib/utils"
 
 type HeroState = {
@@ -12,13 +14,15 @@ type HeroState = {
 // a rate limit or a blip — which says nothing about whether nodes are
 // serving, so index health only ever shows in the meta line. The headline
 // changes only when there's no indexed data to stand on at all.
-async function loadHeroState(): Promise<HeroState> {
-  const result = await getStats()
-  if (result.status === "unconfigured") {
+function heroState(result: StatsResult): HeroState {
+  if (result.status === "loading") {
+    return { headline: "network status", live: false, meta: "loading" }
+  }
+  if (result.status === "error") {
     return {
       headline: "network status",
       live: false,
-      meta: "live data not configured",
+      meta: "stats unavailable",
     }
   }
   if (result.status === "unindexed") {
@@ -47,8 +51,8 @@ function indexedMeta(updatedAt: string) {
     : `indexed ${formatUtcTime(ms / 1000)} utc`
 }
 
-export async function Hero() {
-  const { headline, live, meta } = await loadHeroState()
+export function Hero() {
+  const { headline, live, meta } = heroState(useStats())
   return (
     <section>
       <div className="border-t border-border" />

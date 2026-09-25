@@ -1,5 +1,5 @@
 import { staleSince } from "@/lib/metrics"
-import { getStats, type Stats } from "@/lib/stats"
+import type { Stats, StatsResult } from "@/lib/stats"
 import { UNKNOWN_REGION } from "@/worker/src/stats"
 
 export type RegionRow = {
@@ -19,7 +19,7 @@ export type RegionsView =
       network: RegionRow
       staleSince: number | null
     }
-  | { status: "unconfigured" | "unindexed" }
+  | { status: "loading" | "unindexed" | "error" }
   | { status: "catching-up"; lastBlock: number }
 
 export { UNKNOWN_REGION }
@@ -72,12 +72,15 @@ export function regionRows(stats: Stats) {
   }
 }
 
-export async function loadRegions(): Promise<RegionsView> {
-  const result = await getStats()
+export function regionsView(result: StatsResult): RegionsView {
   if (result.status !== "ok") return { status: result.status }
   const { stats } = result
   if (!stats.caughtUp) {
     return { status: "catching-up", lastBlock: stats.lastBlock }
   }
-  return { status: "ok", ...regionRows(stats), staleSince: staleSince(stats) }
+  return {
+    status: "ok",
+    ...regionRows(stats),
+    staleSince: staleSince(stats, result.checkedAt),
+  }
 }

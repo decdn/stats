@@ -43,6 +43,3 @@ cloudflare-env.d.ts
 
 # claude code
 .claude/
-
-# opennext (cloudflare build of the next app)
-/.open-next/

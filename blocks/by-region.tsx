@@ -1,3 +1,5 @@
+"use client"
+
 import {
   Card,
   CardContent,
@@ -22,11 +24,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import {
-  loadRegions,
+  regionsView,
   UNKNOWN_REGION,
   type RegionRow,
   type RegionsView,
 } from "@/lib/regions"
+import { useStats } from "@/lib/stats"
 import { formatBytes, formatUtcTime } from "@/lib/utils"
 
 const headClassName =
@@ -45,15 +48,19 @@ function countryName(code: string) {
   }
 }
 
-function emptyLabel(view: RegionsView) {
+// No default: a status added to RegionsView fails to compile here instead of
+// borrowing another status's label.
+function emptyLabel(view: RegionsView): string {
   switch (view.status) {
-    case "unconfigured":
-      return "live data not configured"
+    case "loading":
+      return "loading"
+    case "error":
+      return "stats unavailable"
     case "catching-up":
       return `catching up · block ${view.lastBlock}`
     case "ok":
       return "no nodes registered yet"
-    default:
+    case "unindexed":
       return "not indexed yet"
   }
 }
@@ -75,8 +82,8 @@ function CacheHit({ row }: { row: RegionRow }) {
   )
 }
 
-export async function ByRegion() {
-  const view = await loadRegions()
+export function ByRegion() {
+  const view = regionsView(useStats())
   const rows = view.status === "ok" ? view.rows : []
   return (
     <Card className="[--card-spacing:--spacing(4)] sm:[--card-spacing:--spacing(6)]">
