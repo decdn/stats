@@ -281,13 +281,31 @@ export function regionCode(regionHint: string) {
   return /^[A-Z]{2}$/.test(code) ? code : UNKNOWN_REGION
 }
 
-// The current region of the registered node run by `operator`, or null when
-// no registered node has that address.
-function operatorRegion(stats: Stats, operator: Hex) {
-  for (const node of Object.values(stats.nodes)) {
-    if (node.operator === operator) return node.region
+// Looks up registered nodes by operator address in O(1). Built once per fold
+// from `stats.nodes` and kept in step with register/remove; it maps to the
+// nodeId, so a RegionUpdated edit to the node is seen without touching it.
+function operatorIndex(stats: Stats) {
+  const byOperator = new Map<Hex, Hex>()
+  for (const [nodeId, node] of Object.entries(stats.nodes)) {
+    byOperator.set(node.operator, nodeId as Hex)
   }
-  return null
+  return {
+    // The node's current region, or null when no registered node has that
+    // address.
+    region(operator: Hex) {
+      const nodeId = byOperator.get(operator)
+      return nodeId ? (stats.nodes[nodeId]?.region ?? null) : null
+    },
+    add(nodeId: Hex, operator: Hex) {
+      byOperator.set(operator, nodeId)
+    },
+    remove(nodeId: Hex) {
+      const operator = stats.nodes[nodeId]?.operator
+      if (operator && byOperator.get(operator) === nodeId) {
+        byOperator.delete(operator)
+      }
+    },
+  }
 }
 
 function regionTotals(stats: Stats, region: string) {
@@ -313,7 +331,7 @@ function changeRegistered(
   }
 }
 
-function applySettled(stats: Stats, row: SettlementRow) {
+function applySettled(stats: Stats, row: SettlementRow, region: string) {
   stats.totals.valueSettled = add(stats.totals.valueSettled, row.amount)
   stats.totals.bytesServed = add(stats.totals.bytesServed, row.bytesDelivered)
   stats.totals.settlementCount += 1
@@ -327,7 +345,6 @@ function applySettled(stats: Stats, row: SettlementRow) {
     point.settlementCount += 1
   }
 
-  const region = operatorRegion(stats, row.operator) ?? UNKNOWN_REGION
   const totals = regionTotals(stats, region)
   totals.bytesServed = add(totals.bytesServed, row.bytesDelivered)
 
@@ -345,17 +362,24 @@ export function applyEvents(stats: Stats, events: ChainEvent[]) {
   const seen = new Set(
     stats.settlements.map((row) => `${row.txHash}:${row.logIndex}`)
   )
+  const operators = operatorIndex(stats)
   for (const event of events) {
     switch (event.kind) {
       case "settled": {
         const key = `${event.row.txHash}:${event.row.logIndex}`
         if (seen.has(key)) break
         seen.add(key)
-        applySettled(stats, event.row)
+        applySettled(
+          stats,
+          event.row,
+          operators.region(event.row.operator) ?? UNKNOWN_REGION
+        )
         break
       }
       case "nodeRegistered":
         changeRegistered(stats, event.timestamp, (nodes) => {
+          operators.remove(event.nodeId)
+          operators.add(event.nodeId, event.operator)
           nodes[event.nodeId] = {
             operator: event.operator,
             region: regionCode(event.regionHint),
@@ -364,6 +388,7 @@ export function applyEvents(stats: Stats, events: ChainEvent[]) {
         break
       case "nodeRemoved":
         changeRegistered(stats, event.timestamp, (nodes) => {
+          operators.remove(event.nodeId)
           delete nodes[event.nodeId]
         })
         break
@@ -379,7 +404,7 @@ export function applyEvents(stats: Stats, events: ChainEvent[]) {
         // Only a pool a registered node owns pays for that node's pulls;
         // every other pool is a client's.
         const owner = stats.poolOwners[event.poolId]
-        const region = owner && operatorRegion(stats, owner)
+        const region = owner && operators.region(owner)
         if (!region) break
         const totals = regionTotals(stats, region)
         totals.bytesPulled = add(totals.bytesPulled, event.bytesPaid)
