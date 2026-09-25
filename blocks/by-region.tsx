@@ -86,7 +86,7 @@ export async function ByRegion() {
                 nodes
               </TableHead>
               <TableHead className={`${headClassName} text-right`}>
-                bytes
+                bytes served
               </TableHead>
               <TableHead className={`${headClassName} text-right`}>
                 <Tooltip>
