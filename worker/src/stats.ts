@@ -150,12 +150,18 @@ export function parseStats(json: string): Stats | null {
     !Array.isArray(stats.daily) ||
     !Array.isArray(stats.hourly) ||
     !Array.isArray(stats.settlements) ||
+    typeof stats.chainId !== "number" ||
+    typeof stats.feeRouter !== "string" ||
+    typeof stats.capacityBond !== "string" ||
+    typeof stats.paymentPool !== "string" ||
+    typeof stats.startBlock !== "number" ||
     typeof stats.lastBlock !== "number" ||
     typeof stats.caughtUp !== "boolean" ||
+    typeof stats.updatedAt !== "string" ||
     !isUint(stats.totals?.valueSettled) ||
     !isUint(stats.totals?.bytesServed) ||
     typeof stats.totals?.settlementCount !== "number" ||
-    stats.hourly.some((point) => typeof point.registeredNodes !== "number") ||
+    stats.hourly.some((point) => typeof point?.registeredNodes !== "number") ||
     !isRecord(stats.nodes) ||
     !isRecord(stats.poolOwners) ||
     !isRecord(stats.regions)
