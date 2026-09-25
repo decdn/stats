@@ -2,6 +2,17 @@
 
 A single-page status dashboard for the DeCDN network — value settled, bytes served, registered nodes and a per-region breakdown, presented as raw on-chain state read from Arbitrum Sepolia.
 
+[![Live](https://img.shields.io/badge/live-stats.decdn.org-22C55E)](https://stats.decdn.org)
+![Next.js 16](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)
+![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
+![Tailwind CSS v4](https://img.shields.io/badge/Tailwind%20CSS-v4-06B6D4?logo=tailwindcss&logoColor=white)
+![TypeScript 5](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
+![pnpm](https://img.shields.io/badge/pnpm-F69220?logo=pnpm&logoColor=white)
+![Cloudflare Workers](https://img.shields.io/badge/Cloudflare%20Workers-deployed-F38020?logo=cloudflareworkers&logoColor=white)
+![Arbitrum Sepolia](https://img.shields.io/badge/chain-Arbitrum%20Sepolia-28A0F0?logo=arbitrum&logoColor=white)
+[![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-FE5196?logo=conventionalcommits&logoColor=white)](https://www.conventionalcommits.org)
+![Code style: Prettier](https://img.shields.io/badge/code%20style-Prettier-F7B93E?logo=prettier&logoColor=black)
+
 Built with Next.js (App Router), React 19, Tailwind CSS v4, shadcn/ui, and recharts.
 
 > Every section is live: the Worker's cron (code in [`worker/`](worker/)) indexes `FeeRouter`, `CapacityBond` and `PaymentPool` logs and writes `stats-<CHAIN_ID>.json` to R2, which the page reads from the same bucket at build/revalidate time.
