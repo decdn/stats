@@ -39,10 +39,12 @@ Deploy with `pnpm worker:deploy` after `wrangler login`, `wrangler r2 bucket cre
 
 The repo deploys as two Workers, each with its own wrangler config. On Workers Builds that means two projects on the same repo, both with the repo root as root directory:
 
-| Worker | Config | Build command | Deploy command |
-| --- | --- | --- | --- |
-| `decdn-stats-worker` (indexer) | [`worker/wrangler.jsonc`](worker/wrangler.jsonc) | *(none)* | `pnpm worker:deploy` |
-| `decdn-stats` (the page) | [`wrangler.jsonc`](wrangler.jsonc) | `pnpm opennextjs-cloudflare build` | `pnpm opennextjs-cloudflare deploy` |
+| Worker | Config | Build command | Deploy command | Non-production branch deploy command |
+| --- | --- | --- | --- | --- |
+| `decdn-stats-worker` (indexer) | [`worker/wrangler.jsonc`](worker/wrangler.jsonc) | *(none)* | `pnpm worker:deploy` | `pnpm --filter @decdn/stats-worker exec wrangler versions upload` |
+| `stats` (the page) | [`wrangler.jsonc`](wrangler.jsonc) | `pnpm opennextjs-cloudflare build` | `pnpm opennextjs-cloudflare deploy` | `pnpm opennextjs-cloudflare upload` |
+
+The Worker name in the dashboard must match `name` in its wrangler config, or the build fails. The dashboard's default commands (`pnpm run build`, `npx wrangler deploy`) don't work for the page: plain `next build` never produces `.open-next/worker.js`.
 
 Deploy the indexer first: it needs the `decdn-stats` R2 bucket and an `RPC_URL` secret. The page is built with [`@opennextjs/cloudflare`](https://opennext.js.org/cloudflare) and needs the `decdn-stats-cache` R2 bucket (`wrangler r2 bucket create decdn-stats-cache`), which holds the ISR cache behind its 60s revalidate ([`open-next.config.ts`](open-next.config.ts)). Set `STATS_BASE_URL` to the indexer's URL (`https://decdn-stats-worker.<subdomain>.workers.dev`) both as a build variable and as a runtime variable on the page's Worker; `CHAIN_ID` is in `wrangler.jsonc` but also needs to be a build variable so the prerendered page isn't "not configured" until its first revalidate. Locally, `pnpm app:preview` runs the built Worker and `pnpm app:deploy` deploys it.
 

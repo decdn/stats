@@ -2,14 +2,14 @@
 // Worker with its own config in worker/wrangler.jsonc.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "decdn-stats",
+  "name": "stats",
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-09-20",
   // global_fetch_strictly_public: getStats() fetches the indexer's
   // workers.dev URL, which a Worker on the same account can't reach otherwise.
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
-  "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "decdn-stats" }],
+  "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "stats" }],
   // ISR cache for the page's 60s revalidate (open-next.config.ts).
   "r2_buckets": [
     { "binding": "NEXT_INC_CACHE_R2_BUCKET", "bucket_name": "decdn-stats-cache" }
