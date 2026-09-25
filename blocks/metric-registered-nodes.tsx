@@ -1,4 +1,4 @@
-import { ActiveNodesChart } from "@/blocks/charts/metric-active-nodes-chart"
+import { RegisteredNodesChart } from "@/blocks/charts/metric-registered-nodes-chart"
 import {
   Card,
   CardContent,
@@ -6,7 +6,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { loadMetric, activeNodesMetric, type MetricView } from "@/lib/metrics"
+import {
+  loadMetric,
+  registeredNodesMetric,
+  type MetricView,
+} from "@/lib/metrics"
 import { cn, formatUtcTime } from "@/lib/utils"
 
 function emptyLabel(view: MetricView) {
@@ -15,15 +19,13 @@ function emptyLabel(view: MetricView) {
       return "live data not configured"
     case "catching-up":
       return `catching up · block ${view.lastBlock}`
-    case "unsampled":
-      return "not sampled yet"
     default:
       return "not indexed yet"
   }
 }
 
-export async function MetricActiveNodes() {
-  const view = await loadMetric(activeNodesMetric)
+export async function MetricRegisteredNodes() {
+  const view = await loadMetric(registeredNodesMetric)
   const metric = view.status === "ok" ? view.metric : null
   const staleSince = view.status === "ok" ? view.staleSince : null
   return (
@@ -37,7 +39,9 @@ export async function MetricActiveNodes() {
             {metric?.value ?? "—"}
           </span>
         </div>
-        <p className="text-sm text-muted-foreground">bonded on CapacityBond</p>
+        <p className="text-sm text-muted-foreground">
+          registered on CapacityBond
+        </p>
         {metric?.delta && staleSince === null && (
           <p className="text-sm">
             <span
@@ -57,7 +61,7 @@ export async function MetricActiveNodes() {
           </p>
         )}
         {metric ? (
-          <ActiveNodesChart series={metric.series} />
+          <RegisteredNodesChart series={metric.series} />
         ) : (
           <p className="flex h-24 items-center justify-center font-mono text-xs text-muted-foreground lowercase">
             {emptyLabel(view)}
@@ -66,9 +70,9 @@ export async function MetricActiveNodes() {
       </CardContent>
       <CardFooter>
         <p className="font-mono text-[11px]">
-          <span className="text-muted-foreground/60">call</span>{" "}
+          <span className="text-muted-foreground/60">events</span>{" "}
           <span className="text-muted-foreground">
-            CapacityBond.getRegisteredNodes()
+            CapacityBond.NodeRegistered · NodeDeregistered · NodeAutoEjected
           </span>
         </p>
       </CardFooter>

@@ -12,12 +12,12 @@ import type { MetricPoint } from "@/lib/metrics"
 
 const chartConfig = {
   value: {
-    label: "active nodes",
+    label: "registered nodes",
     color: "var(--accent-green)",
   },
 } satisfies ChartConfig
 
-export function ActiveNodesChart({ series }: { series: MetricPoint[] }) {
+export function RegisteredNodesChart({ series }: { series: MetricPoint[] }) {
   const lastIndex = series.length - 1
   const values = series.map((point) => point.value)
   const minValue = Math.min(...values)
@@ -42,7 +42,7 @@ export function ActiveNodesChart({ series }: { series: MetricPoint[] }) {
           content={<ChartTooltipContent indicator="line" />}
         />
         <defs>
-          <linearGradient id="fillActiveNodes" x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id="fillRegisteredNodes" x1="0" y1="0" x2="0" y2="1">
             <stop
               offset="5%"
               stopColor="var(--color-value)"
@@ -58,7 +58,7 @@ export function ActiveNodesChart({ series }: { series: MetricPoint[] }) {
         <Area
           dataKey="value"
           type="stepAfter"
-          fill="url(#fillActiveNodes)"
+          fill="url(#fillRegisteredNodes)"
           stroke="var(--color-value)"
           strokeWidth={1.5}
           isAnimationActive={false}
