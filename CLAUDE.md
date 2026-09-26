@@ -27,9 +27,21 @@ pnpm app:deploy   # build + wrangler deploy
 
 There is no test framework in this project — no test runner, config, or test files. Verify changes with `pnpm typecheck && pnpm lint` (both cover `worker/`) and by looking at the running dev server. The page and the indexer are decoupled locally: `pnpm dev` fetches the production file from `https://data.decdn.org` (or `NEXT_PUBLIC_STATS_URL`, which must send CORS headers), while `pnpm index` (`RPC_URL` in `.env`, repeat until caught up) gets the Worker's bindings and vars from `wrangler.jsonc` + `.env` via wrangler's `getPlatformProxy` and writes the emulated bucket in `.wrangler/state` — read it with `npx wrangler r2 object get decdn-stats/stats-421614.json --local --pipe` (see README).
 
+Live sections render in the browser, so the served HTML only ever shows "loading". To check real states (ok, error, stale, etc.):
+
+- Build with `NEXT_PUBLIC_STATS_URL` pointed at a local server that sends `Access-Control-Allow-Origin` (the URL is inlined at build time).
+- Serve `out/` and render it with headless Chromium: `--headless --dump-dom --virtual-time-budget=<ms>`. Virtual time also fires the 60s refresh.
+- Check that the build succeeded before testing: a failed `next build` leaves the previous `out/` in place.
+- Rebuild with the default URL afterwards.
+
 Git hooks (husky, installed by `pnpm install` via `prepare`): `pre-commit` runs lint-staged — `eslint --fix` + `prettier --write` on staged JS/TS, `prettier --write` on staged json/jsonc/md/css/yaml/yml; `commit-msg` runs commitlint (`@commitlint/config-conventional`). Both are local only: `git commit --no-verify` or `HUSKY=0` skips them, and CI doesn't re-check. Typecheck is deliberately not in the hook: it checks the whole project, and `pretypecheck` first rewrites the gitignored `cloudflare-env.d.ts` with `wrangler types`.
 
 Cloudflare: the repo is one Worker, `stats`, configured by the root `wrangler.jsonc`. The page is a Next static export (`output: "export"` in `next.config.ts`) served from `out/` as Worker assets (`not_found_handling: "404-page"`); there is no server rendering, ISR or OpenNext. Its `main` is `worker/src/index.ts`: the cron's `scheduled` handler, plus a `fetch` that passes asset misses to the `ASSETS` binding. The `STATS` bucket is public at `https://data.decdn.org` and needs the CORS policy in `r2-cors.json` (`npx wrangler r2 bucket cors set decdn-stats --file r2-cors.json`) for the browser to read it. It deploys with the Workers Builds defaults (`pnpm run build`, `npx wrangler deploy`); `RPC_URL` is a Worker secret. Non-production branches deploy with `npx wrangler preview`, which inherits no vars or bindings except the assets and their `ASSETS` binding, and runs no cron; the page needs nothing else, so `wrangler.jsonc` `previews` is empty (the command requires the block). See README "Deploying to Cloudflare".
+
+R2 gotchas:
+
+- `r2-cors.json` uses wrangler's own schema (`rules[].allowed.{origins,methods}`, `maxAgeSeconds`), not S3's `AllowedOrigins` array, whatever reviewers say.
+- R2 deletes only empty buckets, and wrangler can't bulk-delete objects. Empty the bucket in the dashboard, or add a lifecycle rule (`wrangler r2 bucket lifecycle add <bucket> <rule> "" --expire-date <today>`) and wait for R2 to apply it.
 
 Add shadcn/ui components with `npx shadcn@latest add <name>`; they land in `components/ui/`.
 
