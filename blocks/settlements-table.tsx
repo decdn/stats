@@ -1,3 +1,5 @@
+"use client"
+
 import {
   Table,
   TableBody,
@@ -7,7 +9,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { SectionHeading } from "@/globals/SectionHeading/section-heading"
-import { getStats } from "@/lib/stats"
+import { useStats, type StatsResult } from "@/lib/stats"
 import {
   formatBytes,
   formatUsdc,
@@ -35,8 +37,8 @@ type Row = {
 
 type TableData = {
   rows: Row[]
-  // Distinguishes the honest empty states: live data not wired up vs an
-  // indexed chain with no settlements (yet).
+  // Distinguishes the honest empty states: no stats to show (loading,
+  // unavailable, not indexed yet) vs an indexed chain with no settlements yet.
   emptyLabel: string
   // Set mid-backfill only; a caught-up index's time is in the hero.
   footer: string | null
@@ -45,10 +47,12 @@ type TableData = {
 // Every row here is a real Settled log or the table stays empty — there is
 // deliberately no mock fallback, because a plausible-looking fake settlement
 // is the one thing this section must never render.
-async function loadSettlements(): Promise<TableData> {
-  const result = await getStats()
-  if (result.status === "unconfigured") {
-    return { rows: [], emptyLabel: "live data not configured", footer: null }
+function settlementsData(result: StatsResult): TableData {
+  if (result.status === "loading") {
+    return { rows: [], emptyLabel: "loading", footer: null }
+  }
+  if (result.status === "error") {
+    return { rows: [], emptyLabel: "stats unavailable", footer: null }
   }
   if (result.status === "unindexed") {
     return {
@@ -96,8 +100,8 @@ function groupByDate(rows: Row[]) {
   return groups
 }
 
-export async function SettlementsTable() {
-  const { rows: settlements, emptyLabel, footer } = await loadSettlements()
+export function SettlementsTable() {
+  const { rows: settlements, emptyLabel, footer } = settlementsData(useStats())
   return (
     <section className="flex w-full flex-col gap-5">
       <SectionHeading title="latest settlements">

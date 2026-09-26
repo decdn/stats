@@ -7,8 +7,8 @@ const httpMetadata = {
   cacheControl: "public, max-age=60",
 }
 
-// What the store needs from the Worker env — the page passes its own env
-// (CloudflareEnv), which carries these but not the indexer's config.
+// What the store needs from the Worker env, so statsKey and statsStore don't
+// depend on the indexer's config.
 export type StoreEnv = Pick<
   Env,
   | "STATS"
@@ -25,11 +25,12 @@ export function statsKey(env: StoreEnv) {
   return `stats-${parseChainId(env)}.json`
 }
 
-// Where the stats file lives. The R2 *binding* is the default (prod, and the
-// locally emulated bucket under `wrangler dev`). When S3 credentials are set
-// the same bucket (assuming `R2_BUCKET` matches wrangler.jsonc's
-// `bucket_name`) is reached over R2's S3 API instead, so a local run can
-// read/write the real bucket without `wrangler dev --remote`.
+// Where the indexer reads and writes the stats file (the page fetches it from
+// the bucket's public URL instead). The R2 *binding* is the default (prod, and
+// the locally emulated bucket under `wrangler dev` and `pnpm index`). When S3
+// credentials are set the same bucket (assuming `R2_BUCKET` matches
+// wrangler.jsonc's `bucket_name`) is reached over R2's S3 API instead, so a
+// local run can read/write the real bucket without `wrangler dev --remote`.
 export type StatsStore = {
   label: string
   key: string

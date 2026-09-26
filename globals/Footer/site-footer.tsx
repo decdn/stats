@@ -1,12 +1,14 @@
-import { getStats } from "@/lib/stats"
+"use client"
+
+import { useStats } from "@/lib/stats"
 import { truncateHex } from "@/lib/utils"
 
 const explorerAddressUrl = "https://sepolia.arbiscan.io/address/"
 
 // The contracts every figure is read from, taken from stats.json so they
 // always name the deployment that was actually indexed.
-export async function SiteFooter() {
-  const result = await getStats()
+export function SiteFooter() {
+  const result = useStats()
   const contracts =
     result.status === "ok"
       ? [

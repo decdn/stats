@@ -1,3 +1,5 @@
+"use client"
+
 import { ValueSettledChart } from "@/blocks/charts/metric-value-settled-chart"
 import {
   Card,
@@ -6,22 +8,30 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { loadMetric, valueSettledMetric, type MetricView } from "@/lib/metrics"
+import { metricView, valueSettledMetric, type MetricView } from "@/lib/metrics"
+import { useStats } from "@/lib/stats"
 import { cn, formatUtcTime } from "@/lib/utils"
 
-function emptyLabel(view: MetricView) {
+// No default: a status added to MetricView fails to compile here instead of
+// borrowing another status's label.
+function emptyLabel(view: MetricView): string {
   switch (view.status) {
-    case "unconfigured":
-      return "live data not configured"
+    case "loading":
+      return "loading"
+    case "error":
+      return "stats unavailable"
     case "catching-up":
       return `catching up · block ${view.lastBlock}`
-    default:
+    case "unindexed":
       return "no settlements indexed yet"
+    case "ok":
+      // not rendered: the chart shows instead
+      return ""
   }
 }
 
-export async function MetricValueSettled() {
-  const view = await loadMetric(valueSettledMetric)
+export function MetricValueSettled() {
+  const view = metricView(useStats(), valueSettledMetric)
   const metric = view.status === "ok" ? view.metric : null
   const staleSince = view.status === "ok" ? view.staleSince : null
   return (

@@ -1,4 +1,6 @@
-import { getStats, type Stats } from "@/lib/stats"
+"use client"
+
+import { useStats, type Stats, type StatsResult } from "@/lib/stats"
 import { cn, formatBytes, formatUsdc, formatUtcTime } from "@/lib/utils"
 
 const explorerUrl = "https://sepolia.arbiscan.io"
@@ -27,11 +29,9 @@ type HeroState = {
 // about whether nodes are serving, so index health only ever shows in the
 // meta line. Mid-backfill the newest indexed settlement isn't the newest on
 // chain, so the headline stays neutral until the index catches up.
-async function loadHeroState(): Promise<HeroState> {
-  const result = await getStats()
-  if (result.status === "unconfigured") {
-    return neutral("live data not configured")
-  }
+function heroState(result: StatsResult): HeroState {
+  if (result.status === "loading") return neutral("loading")
+  if (result.status === "error") return neutral("stats unavailable")
   if (result.status === "unindexed") {
     return neutral("waiting for the first index")
   }
@@ -76,8 +76,8 @@ function lastSettlement(
   }
 }
 
-export async function Hero() {
-  const { headline, live, meta, last } = await loadHeroState()
+export function Hero() {
+  const { headline, live, meta, last } = heroState(useStats())
   return (
     <section className="pt-6">
       <p className="font-mono text-[11px] tracking-widest text-muted-foreground uppercase">
