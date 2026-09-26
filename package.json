@@ -9,15 +9,14 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "pnpm cf-typegen && opennextjs-cloudflare build",
-    "start": "next start",
-    "app:preview": "pnpm build && opennextjs-cloudflare preview",
-    "app:deploy": "pnpm build && opennextjs-cloudflare deploy",
+    "build": "pnpm cf-typegen && next build",
+    "app:preview": "pnpm build && wrangler dev --test-scheduled",
+    "app:deploy": "pnpm build && wrangler deploy",
     "lint": "eslint",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,mjs,cjs,json,jsonc,css,md,yaml,yml}\"",
     "typecheck": "tsc --noEmit",
     "index": "tsx worker/src/tick.ts",
-    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
+    "cf-typegen": "wrangler types cloudflare-env.d.ts",
     "pretypecheck": "pnpm cf-typegen",
     "prepare": "husky"
   },
@@ -47,7 +46,6 @@
   "devDependencies": {
     "@commitlint/cli": "^21.2.3",
     "@commitlint/config-conventional": "^21.2.3",
-    "@opennextjs/cloudflare": "^1.20.6",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

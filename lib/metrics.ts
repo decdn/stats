@@ -1,4 +1,4 @@
-import { getStats, type Stats } from "@/lib/stats"
+import type { Stats, StatsResult } from "@/lib/stats"
 import { formatBytes, formatUsdcCents, scaleBytes } from "@/lib/utils"
 
 // The metric cards' view of stats.json: a headline, a rolling-24h change and
@@ -25,7 +25,7 @@ export type MetricView =
   // `staleSince` (unix seconds) is set when the worker hasn't written for a
   // while: the headline is still true as of then, the 24h change isn't.
   | { status: "ok"; metric: Metric; staleSince: number | null }
-  | { status: "unconfigured" | "unindexed" }
+  | { status: "loading" | "unindexed" | "error" }
   // Totals are partial and the hourly window is in the past (backfill,
   // re-index, outage recovery), so nothing is shown until it's caught up.
   | { status: "catching-up"; lastBlock: number }
@@ -34,23 +34,27 @@ const windowHours = 24
 // Three missed 10-minute cron ticks.
 const staleAfterMs = 30 * 60_000
 
-export async function loadMetric(
+export function metricView(
+  result: StatsResult,
   build: (stats: Stats) => Metric
-): Promise<MetricView> {
-  const result = await getStats()
+): MetricView {
   if (result.status !== "ok") return { status: result.status }
   const { stats } = result
   if (!stats.caughtUp) {
     return { status: "catching-up", lastBlock: stats.lastBlock }
   }
-  return { status: "ok", metric: build(stats), staleSince: staleSince(stats) }
+  return {
+    status: "ok",
+    metric: build(stats),
+    staleSince: staleSince(stats, result.checkedAt),
+  }
 }
 
-// Unix seconds of the worker's last write when it has stopped writing, else
-// null.
-export function staleSince(stats: Stats) {
+// Unix seconds of the worker's last write when, as of `checkedAt` (ms, the
+// page's last fetch attempt), it has stopped writing; else null.
+export function staleSince(stats: Stats, checkedAt: number) {
   const updatedAt = Date.parse(stats.updatedAt)
-  return Date.now() - updatedAt > staleAfterMs ? updatedAt / 1000 : null
+  return checkedAt - updatedAt > staleAfterMs ? updatedAt / 1000 : null
 }
 
 // A non-negative sum as a delta. "Up" only when the displayed figure is

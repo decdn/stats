@@ -1,3 +1,5 @@
+"use client"
+
 import { RegisteredNodesChart } from "@/blocks/charts/metric-registered-nodes-chart"
 import {
   Card,
@@ -7,25 +9,33 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import {
-  loadMetric,
+  metricView,
   registeredNodesMetric,
   type MetricView,
 } from "@/lib/metrics"
+import { useStats } from "@/lib/stats"
 import { cn, formatUtcTime } from "@/lib/utils"
 
-function emptyLabel(view: MetricView) {
+// No default: a status added to MetricView fails to compile here instead of
+// borrowing another status's label.
+function emptyLabel(view: MetricView): string {
   switch (view.status) {
-    case "unconfigured":
-      return "live data not configured"
+    case "loading":
+      return "loading"
+    case "error":
+      return "stats unavailable"
     case "catching-up":
       return `catching up · block ${view.lastBlock}`
-    default:
+    case "unindexed":
       return "not indexed yet"
+    case "ok":
+      // not rendered: the chart shows instead
+      return ""
   }
 }
 
-export async function MetricRegisteredNodes() {
-  const view = await loadMetric(registeredNodesMetric)
+export function MetricRegisteredNodes() {
+  const view = metricView(useStats(), registeredNodesMetric)
   const metric = view.status === "ok" ? view.metric : null
   const staleSince = view.status === "ok" ? view.staleSince : null
   return (

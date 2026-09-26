@@ -15,7 +15,7 @@ A single-page status dashboard for the DeCDN network — value settled, bytes se
 
 Built with Next.js (App Router), React 19, Tailwind CSS v4, shadcn/ui, and recharts.
 
-> Every section is live: the Worker's cron (code in [`worker/`](worker/)) indexes `FeeRouter`, `CapacityBond` and `PaymentPool` logs and writes `stats-<CHAIN_ID>.json` to R2, which the page reads from the same bucket at build/revalidate time.
+> Every section is live: the Worker's cron (code in [`worker/`](worker/)) indexes `FeeRouter`, `CapacityBond` and `PaymentPool` logs and writes `stats-<CHAIN_ID>.json` to R2. The bucket is public at `https://data.decdn.org`, and the page, a static export, fetches the file in the browser and refreshes it every minute while the tab is visible.
 
 ## Getting started
 
@@ -26,25 +26,25 @@ pnpm install
 pnpm dev
 ```
 
-Then open http://localhost:3000. Without a `.env` the metric cards and settlements table render their empty state ("live data not configured").
+Then open http://localhost:3000. The page needs no `.env`: it fetches the live production file, `https://data.decdn.org/stats-421614.json`, from the browser. Set `NEXT_PUBLIC_STATS_URL` in `.env` to read another URL, which must send CORS headers. Until the file loads, every section says "loading"; if the first fetch fails they say "stats unavailable". After that a failed refresh keeps the last stats on screen, marked "as of …" once they are over 30 minutes old.
 
-### Live on-chain data (local)
+### Running the indexer locally
 
 ```bash
 cp .env.example .env   # fill RPC_URL
 pnpm index             # one cron tick into a locally emulated R2 bucket
-pnpm dev               # reads the same bucket
+npx wrangler r2 object get decdn-stats/stats-421614.json --local --pipe
 ```
 
-Each tick indexes at most `LOG_CHUNK_BLOCKS × MAX_CHUNKS_PER_RUN` blocks (see [`wrangler.jsonc`](wrangler.jsonc)) past `lastBlock`, so the first backfill takes a few runs of `pnpm index`; set `LOG_CHUNK_BLOCKS=1000000` in `.env` if your RPC allows wide `eth_getLogs` ranges. Both commands take their bindings and vars from `wrangler.jsonc` plus `.env`, and share the emulated bucket in `.wrangler/state`. Until the index has caught up with the chain the metric cards read "catching up · block N" and the table footer "re-indexing". The registered-node count and its history are folded from `CapacityBond` registration events, so the sparkline and 24h change are complete as soon as the index catches up.
+Each tick indexes at most `LOG_CHUNK_BLOCKS × MAX_CHUNKS_PER_RUN` blocks (see [`wrangler.jsonc`](wrangler.jsonc)) past `lastBlock`, so the first backfill takes a few runs of `pnpm index`; set `LOG_CHUNK_BLOCKS=1000000` in `.env` if your RPC allows wide `eth_getLogs` ranges. `pnpm index` takes its bindings and vars from `wrangler.jsonc` plus `.env`, and the emulated bucket persists in `.wrangler/state`; with the `R2_*` credentials set it writes the real bucket instead. To render a local file, serve it with CORS headers and point `NEXT_PUBLIC_STATS_URL` at it. Until the index has caught up with the chain the metric cards read "catching up · block N" and the table footer "re-indexing". The registered-node count and its history are folded from `CapacityBond` registration events, so the sparkline and 24h change are complete as soon as the index catches up.
 
 ## Deploying to Cloudflare
 
-The repo is one Worker, `stats`, configured in [`wrangler.jsonc`](wrangler.jsonc). Its entry, [`worker/src/index.ts`](worker/src/index.ts), wraps the `fetch` handler that [`@opennextjs/cloudflare`](https://opennext.js.org/cloudflare) generates into `.open-next/worker.js` and adds the `scheduled` handler: every 10 minutes the cron indexes the chain into the `decdn-stats` R2 bucket (binding `STATS`), which the page reads directly.
+The repo is one Worker, `stats`, configured in [`wrangler.jsonc`](wrangler.jsonc). It serves the static export in `out/` as assets (`not_found_handling: "404-page"`), and its entry, [`worker/src/index.ts`](worker/src/index.ts), adds the `scheduled` handler: every 10 minutes the cron indexes the chain into the `decdn-stats` R2 bucket (binding `STATS`). The bucket's public domain, `data.decdn.org`, serves the file to the page. There is no server rendering, so the Worker's own `fetch` only hands asset misses back to the assets binding.
 
-On Workers Builds it's one project with the repo root as root directory and the defaults: build command `pnpm run build`, deploy command `npx wrangler deploy`, non-production branch deploy command `npx wrangler preview`. A Preview inherits no vars or bindings, so the `previews` block in [`wrangler.jsonc`](wrangler.jsonc) redeclares what the page reads — `CHAIN_ID` and the two production buckets — and nothing else: no cron runs there, and ISR doesn't revalidate (its self-reference binding would call production). Change `CHAIN_ID` in both places. The Worker name in the dashboard must match `name` in `wrangler.jsonc`, or the build fails. `pnpm build` is the OpenNext build (it runs `next build` itself, via `buildCommand` in [`open-next.config.ts`](open-next.config.ts)). Keep the Worker free of Durable Object migrations: `wrangler versions upload` refuses to apply them — hence the in-memory revalidation queue.
+On Workers Builds it's one project with the repo root as root directory and the defaults: build command `pnpm run build`, deploy command `npx wrangler deploy`, non-production branch deploy command `npx wrangler preview`. A Preview inherits no vars or bindings except the assets and their `ASSETS` binding, and runs no cron; the page needs nothing else, so the `previews` block in [`wrangler.jsonc`](wrangler.jsonc) is empty (`wrangler preview` requires it to exist). A Preview reads the production file like everything else. The Worker name in the dashboard must match `name` in `wrangler.jsonc`, or the build fails. `pnpm build` is `next build` with `output: "export"` (after `cf-typegen`, since it typechecks `worker/` too).
 
-Before the first deploy: `wrangler r2 bucket create decdn-stats` and `wrangler secret put RPC_URL`. The ISR cache (the page's 60s revalidate) lives in the `decdn-stats-cache` R2 bucket, which `wrangler deploy` creates if it's missing. Locally, `pnpm app:preview` runs the built Worker in workerd — after `pnpm build`, `npx wrangler dev --test-scheduled` does the same and fires the cron on `curl "http://localhost:8787/__scheduled?cron=*/10+*+*+*+*"` — and `pnpm app:deploy` deploys it (also pre-filling the R2 cache, which `wrangler deploy` leaves to the first request).
+Before the first deploy: `wrangler r2 bucket create decdn-stats`, `wrangler secret put RPC_URL`, connect the bucket's public custom domain (`data.decdn.org`) in the R2 dashboard, and give it the CORS policy in [`r2-cors.json`](r2-cors.json) — `npx wrangler r2 bucket cors set decdn-stats --file r2-cors.json` — without which the browser can't read the file. `CHAIN_ID` in `wrangler.jsonc` names the file, so the page's URL in [`lib/stats.tsx`](lib/stats.tsx) must change with it. Locally, `pnpm app:preview` builds and runs the Worker in workerd with `--test-scheduled`, so `curl "http://localhost:8787/__scheduled?cron=*/10+*+*+*+*"` fires a cron tick. `pnpm app:deploy` builds and deploys it.
 
 When the contracts are redeployed, update `FEE_ROUTER`, `CAPACITY_BOND`, `PAYMENT_POOL` and `START_BLOCK` in [`wrangler.jsonc`](wrangler.jsonc). The addresses come from `decdn/contracts/deployments/421614.json`, but that file's `deployBlock` is an **L1** number — `START_BLOCK` must be the L2 block: take the earliest creation block of the three contracts from arbiscan, or the first L2 block whose `l1BlockNumber` ≥ `deployBlock`. The stats file records the deployment it was built from (chain, the three addresses, `START_BLOCK`), so the next tick notices the change and re-indexes from scratch over it. A stats file the indexer can't read (bad JSON, or a shape from an older version) is overwritten the same way. The rebuild takes several ticks, during which the cards show "catching up".
 
@@ -53,14 +53,13 @@ When the contracts are redeployed, update `FEE_ROUTER`, `CAPACITY_BOND`, `PAYMEN
 | Command            | What it does                                                                                            |
 | ------------------ | ------------------------------------------------------------------------------------------------------- |
 | `pnpm dev`         | Start the dev server                                                                                    |
-| `pnpm build`       | Production build (OpenNext, for Cloudflare)                                                             |
-| `pnpm start`       | Serve the production build                                                                              |
+| `pnpm build`       | Production build: the static export in `out/`                                                           |
 | `pnpm lint`        | ESLint (next core-web-vitals)                                                                           |
 | `pnpm typecheck`   | `wrangler types` (via `cf-typegen`), then `tsc --noEmit`                                                |
 | `pnpm format`      | Prettier over ts/tsx/js/jsx/mjs/cjs/json/jsonc/css/md/yaml/yml                                          |
 | `pnpm index`       | Run one indexer tick into the local (or `.env`-configured) bucket                                       |
 | `pnpm cf-typegen`  | Generate `cloudflare-env.d.ts` from `wrangler.jsonc` (gitignored; `build` and `typecheck` run it first) |
-| `pnpm app:preview` | Build with OpenNext and run the Worker in workerd                                                       |
+| `pnpm app:preview` | Build and run the Worker in workerd; `/__scheduled` fires a cron tick                                   |
 | `pnpm app:deploy`  | Build and deploy the Worker to Cloudflare                                                               |
 
 There is no test framework in this project. Verify changes with `pnpm typecheck && pnpm lint` and by looking at the running dev server.
@@ -74,7 +73,7 @@ app/            layout, globals.css, and page.tsx — the only composition point
 blocks/         page sections (hero, metric-*, by-region, settlements); charts/ holds the metric cards' client charts
 globals/        chrome reused across sections (Header, Footer, SectionDivider)
 components/ui/  unmodified shadcn/ui primitives
-lib/stats.ts    getStats() — reads stats-<CHAIN_ID>.json from the STATS bucket
+lib/stats.tsx   StatsProvider + useStats() — fetches the public stats file in the browser
 worker/src/     the Worker entry and the indexer (cron → R2)
 lib/metrics.ts  stats file → metric card view models (headline, 24h change, hourly series)
 lib/regions.ts  stats file → by-region rows (nodes, bytes, cache hit)
@@ -83,9 +82,9 @@ lib/regions.ts  stats file → by-region rows (nodes, bytes, cache hit)
 Two rules explain most of the structure:
 
 - **Figures and copy are separated.** `lib/metrics.ts` and `lib/regions.ts` hold only values and statuses (`Metric`, `MetricView`, `RegionRow`, `RegionsView`); even empty-state labels live in the blocks. Headlines, labels, and prose are hardcoded in the block that renders them — so changing what the page _says_ means editing that block, not the data file.
-- **Blocks take no props and own no layout.** Each section's entry component takes no props and loads its own figures; only the `charts/metric-*-chart.tsx` client halves receive `series` from their server block. `app/page.tsx` assembles them and owns all page-level layout (the `max-w-6xl` container, the metrics grid).
+- **Blocks take no props and own no layout.** Each section's entry component takes no props and reads its own figures with `useStats()`; only the `charts/metric-*-chart.tsx` halves receive `series` from their block. `app/page.tsx` assembles them inside `StatsProvider` and owns all page-level layout (the `max-w-6xl` container, the metrics grid).
 
-The three metric cards are deliberately separate files rather than one parameterized component: each owns its own `ChartConfig`, gradient `id`, and Y-domain math. Each is an async server component (`metric-*.tsx`, awaits `getStats()`) paired with a `"use client"` chart (`charts/metric-*-chart.tsx`) because of recharts; the rest are server components.
+The three metric cards are deliberately separate files rather than one parameterized component: each owns its own `ChartConfig`, gradient `id`, and Y-domain math. Each is a client component (`metric-*.tsx`, `useStats()`) paired with its recharts chart (`charts/metric-*-chart.tsx`). Every block that shows live data is a client component; the static HTML is their "loading" state.
 
 ## Conventions
 

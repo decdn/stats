@@ -1,10 +1,10 @@
-import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare"
 import type { NextConfig } from "next"
 
-const nextConfig: NextConfig = {}
+// A static export (out/): the page fetches the public stats file in the
+// browser (lib/stats.tsx), so there's nothing to render on a server. The
+// Worker serves out/ as static assets (wrangler.jsonc).
+const nextConfig: NextConfig = {
+  output: "export",
+}
 
 export default nextConfig
-
-// Gives `next dev` the Worker's bindings and vars (wrangler.jsonc plus .env),
-// so getStats() reads the same local bucket `pnpm index` writes.
-initOpenNextCloudflareForDev()
