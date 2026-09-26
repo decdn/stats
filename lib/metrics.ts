@@ -102,7 +102,8 @@ export function bytesServedMetric(stats: Stats): Metric {
   const { total, series, delta } = cumulative(stats, "bytesServed")
   const { value, unit, divisor } = scaleBytes(Number(total))
   return {
-    value: value.toFixed(1),
+    // Whole bytes stay whole, as in formatBytes.
+    value: value.toFixed(unit === "B" ? 0 : 1),
     unit,
     delta: signedDelta(formatBytes(Number(delta))),
     // Plotted in the headline's unit so the tooltip reads like it.

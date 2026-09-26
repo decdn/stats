@@ -1,6 +1,6 @@
 "use client"
 
-import { Area, AreaChart, XAxis, YAxis } from "recharts"
+import { Line, LineChart, XAxis, YAxis } from "recharts"
 
 import {
   ChartContainer,
@@ -13,7 +13,8 @@ import type { MetricPoint } from "@/lib/metrics"
 const chartConfig = {
   value: {
     label: "registered nodes",
-    color: "var(--accent-green)",
+    // Neutral: the accent marks status and growth, not series.
+    color: "var(--muted-foreground)",
   },
 } satisfies ChartConfig
 
@@ -30,7 +31,7 @@ export function RegisteredNodesChart({ series }: { series: MetricPoint[] }) {
 
   return (
     <ChartContainer config={chartConfig} className="aspect-auto h-24 w-full">
-      <AreaChart
+      <LineChart
         accessibilityLayer
         data={series}
         margin={{ left: 4, right: 6, top: 6, bottom: 0 }}
@@ -41,24 +42,12 @@ export function RegisteredNodesChart({ series }: { series: MetricPoint[] }) {
           cursor={false}
           content={<ChartTooltipContent indicator="line" />}
         />
-        <defs>
-          <linearGradient id="fillRegisteredNodes" x1="0" y1="0" x2="0" y2="1">
-            <stop
-              offset="5%"
-              stopColor="var(--color-value)"
-              stopOpacity={0.8}
-            />
-            <stop
-              offset="95%"
-              stopColor="var(--color-value)"
-              stopOpacity={0.05}
-            />
-          </linearGradient>
-        </defs>
-        <Area
+        {/* A count moves in steps, and the Y domain puts a flat count near
+            the top, so a filled area would make a quiet day the heaviest
+            shape in the row. */}
+        <Line
           dataKey="value"
           type="stepAfter"
-          fill="url(#fillRegisteredNodes)"
           stroke="var(--color-value)"
           strokeWidth={1.5}
           isAnimationActive={false}
@@ -76,7 +65,7 @@ export function RegisteredNodesChart({ series }: { series: MetricPoint[] }) {
             )
           }
         />
-      </AreaChart>
+      </LineChart>
     </ChartContainer>
   )
 }

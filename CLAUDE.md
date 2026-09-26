@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # This is NOT the Next.js you know
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+
 <!-- END:nextjs-agent-rules -->
 
 ## Commands
@@ -55,16 +56,16 @@ Single-page Next.js App Router status dashboard ("network status") that presents
 The layering that matters:
 
 - **Copy lives in blocks.** `lib/metrics.ts` and `lib/regions.ts` return figures and statuses only; headlines, labels, captions, micro-labels, and prose are hardcoded in the block that renders them, so changing what the page _says_ means editing that block.
-- **`blocks/` — page sections.** One entry file per section (`hero`, `metric-*`, `by-region`, `settlements-table`), each a zero-prop exported `"use client"` component that owns its own copy and reads `useStats()` (`by-region` via `regionsView`; `hero`, whose meta line shows index freshness — the headline deliberately ignores it, since a stale index means a lagging worker or RPC, not a down network; `metric-*` via `metricView`; `settlements-table`). The three metric cards are deliberately separate files rather than one parameterized component: each block `metric-*.tsx` is paired with its own `charts/metric-*-chart.tsx` that owns its `ChartConfig`, gradient `id`, and Y-domain math.
-- **`globals/<Name>/` — chrome reused across sections** (`Header`, `Footer`, `SectionDivider`). `SiteHeader` is a static wordmark; `SiteFooter` is a client component that links the indexed `feeRouter`/`capacityBond` from `useStats()`.
+- **`blocks/` — page sections.** One entry file per section (`hero`, `metric-*`, `by-region`, `settlements-table`), each a zero-prop exported `"use client"` component that owns its own copy and reads `useStats()` (`by-region` via `regionsView`; `hero`, whose headline (on / quiet) is backed by the newest settlement measured against the worker's last write, not the wall clock — a stale index means a lagging worker or RPC, not a down network, so index freshness only shows in its meta line; mid-backfill the headline goes neutral; `metric-*` via `metricView`; `settlements-table`). The three metric cards are deliberately separate files rather than one parameterized component: each block `metric-*.tsx` is paired with its own `charts/metric-*-chart.tsx` that owns its `ChartConfig`, series shape (an area with its gradient `id`, or a step line for registered nodes), and Y-domain math.
+- **`globals/<Name>/` — chrome reused across sections** (`Header`, `Footer`, `SectionHeading`). `SiteHeader` is static (wordmark, chain link); `SiteFooter` is a client component that links the indexed `feeRouter`/`capacityBond`/`paymentPool` from `useStats()`; `SectionHeading` is the top rule, h2 and a short description (where a section names the contracts it reads) that `by-region` and `settlements-table` fill with their own copy; it has no directive and renders inside those client blocks.
 - **`app/page.tsx` — the only composition point.** It assembles blocks and owns all page-level layout (`max-w-6xl` container, the metrics grid). Blocks do not lay themselves out relative to each other.
-- **`components/ui/` — unmodified shadcn/ui primitives.** `app/layout.tsx` wraps everything in `ThemeProvider` (next-themes, class attribute) and `TooltipProvider`.
+- **`components/ui/` — unmodified shadcn/ui primitives.** `app/layout.tsx` wraps everything in `ThemeProvider` (next-themes, class attribute).
 
 ### Conventions in this codebase
 
 - Charts are recharts inside shadcn's `ChartContainer`; series colors come from `ChartConfig` and are read in JSX as `var(--color-<dataKey>)`.
-- Everything that reads stats is a client component (`"use client"`, `useStats()`), since the page is static; `app/page.tsx`, `app/layout.tsx`, `SiteHeader` and `SectionDivider` stay server components, rendered at build time. The `charts/metric-*-chart.tsx` files take `series` from their block.
-- Design tokens are CSS variables defined in `app/globals.css` (`:root` / `.dark`) and mapped into Tailwind v4 via `@theme inline`. There is no `tailwind.config`. `--accent-green` is the project's one non-neutral accent; use tokens (`text-muted-foreground`, `bg-accent-green`) rather than raw colors.
+- Everything that reads stats is a client component (`"use client"`, `useStats()`), since the page is static; `app/page.tsx`, `app/layout.tsx` and `SiteHeader` stay server components, rendered at build time. The `charts/metric-*-chart.tsx` files take `series` from their block.
+- Design tokens are CSS variables defined in `app/globals.css` (`:root` / `.dark`) and mapped into Tailwind v4 via `@theme inline`. There is no `tailwind.config`. `--accent-green` is the project's one non-neutral accent, reserved for liveness (the hero dot), growth (positive deltas) and the wordmark's underscore — charts stay neutral; use tokens (`text-muted-foreground`, `bg-accent-green`) rather than raw colors.
 - Visual voice: lowercase copy, `font-mono` uppercase micro-labels with wide tracking for metadata, `tabular-nums` for figures.
 - `lib/utils.ts` re-exports `cn` from the `cn` package and holds the display formatters (`scaleBytes`/`formatBytes` pick a base-1000 unit for a raw byte count; `formatUsdc`/`formatUsdcCents` do bigint-safe 6-decimal USDC). Import paths use the `@/*` alias rooted at the project directory.
 - Prettier: no semicolons, double quotes, 2-space indent, 80 columns, with `prettier-plugin-tailwindcss` sorting classes.

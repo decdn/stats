@@ -13,7 +13,8 @@ import type { MetricPoint } from "@/lib/metrics"
 const chartConfig = {
   value: {
     label: "bytes served",
-    color: "var(--accent-green)",
+    // Neutral: the accent marks status and growth, not series.
+    color: "var(--muted-foreground)",
   },
 } satisfies ChartConfig
 
@@ -46,13 +47,9 @@ export function BytesServedChart({ series }: { series: MetricPoint[] }) {
             <stop
               offset="5%"
               stopColor="var(--color-value)"
-              stopOpacity={0.8}
+              stopOpacity={0.25}
             />
-            <stop
-              offset="95%"
-              stopColor="var(--color-value)"
-              stopOpacity={0.05}
-            />
+            <stop offset="95%" stopColor="var(--color-value)" stopOpacity={0} />
           </linearGradient>
         </defs>
         <Area
