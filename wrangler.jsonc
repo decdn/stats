@@ -14,7 +14,7 @@
     "binding": "ASSETS",
     "not_found_handling": "404-page",
   },
-  "triggers": { "crons": ["*/10 * * * *"] },
+  "triggers": { "crons": ["*/5 * * * *"] },
   "r2_buckets": [
     // stats-<CHAIN_ID>.json: written by the cron, served publicly on
     // data.decdn.org (lib/stats.tsx). The browser fetch needs the bucket's
