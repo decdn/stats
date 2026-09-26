@@ -18,8 +18,12 @@ import { statsStore } from "./store"
 // next tick retries the same range.
 export async function runIndex(env: Env) {
   const config = parseConfig(env)
+  // No JSON-RPC batching: under load Infura answers a batch with HTTP 200 and
+  // bare `{ code: -32005 }` items that viem reads as an empty result instead of
+  // an error. Unbatched, the rate limit is an HTTP 429, which viem retries with
+  // exponential backoff (150ms doubling; 5 retries span ~4.6s).
   const client = createPublicClient({
-    transport: http(config.rpcUrl, { batch: true }),
+    transport: http(config.rpcUrl, { retryCount: 5 }),
   })
 
   const rpcChainId = await client.getChainId()

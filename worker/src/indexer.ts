@@ -62,11 +62,12 @@ export async function indexEvents(
           .map((log) => log.blockNumber)
       ),
     ]
-    // With `batch: true` on the transport these coalesce into a single HTTP
-    // request (a JSON-RPC batch, up to viem's batchSize per request).
-    const blocks = await Promise.all(
-      blockNumbers.map((blockNumber) => client.getBlock({ blockNumber }))
-    )
+    // One request per block, in sequence rather than a parallel burst, to stay
+    // under the RPC's per-second rate limit (see the transport in run.ts).
+    const blocks = []
+    for (const blockNumber of blockNumbers) {
+      blocks.push(await client.getBlock({ blockNumber }))
+    }
     const timestamps = new Map(
       blocks.map((block) => [block.number, Number(block.timestamp)])
     )
