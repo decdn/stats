@@ -70,16 +70,22 @@ async function fetchStats(signal: AbortSignal): Promise<Fetched> {
 }
 
 // The next result after a fetch (`fetched` is null when it threw). Once the
-// page has shown stats, only newer stats replace them: a failure or an
-// unindexed file keeps them on screen, re-checked for staleness. Before that,
-// a failure shows the error.
+// page has shown stats, only newer stats replace them: a failure, an
+// unindexed file or an older copy (a stale cache) keeps them on screen,
+// re-checked for staleness. Before that, a failure shows the error.
 function settle(
   current: StatsResult,
   fetched: Fetched | null,
   checkedAt: number
 ): StatsResult {
+  if (current.status === "ok") {
+    // asStats guarantees both updatedAt values parse.
+    const newer =
+      fetched?.status === "ok" &&
+      Date.parse(fetched.stats.updatedAt) >= Date.parse(current.stats.updatedAt)
+    return newer ? { ...fetched, checkedAt } : { ...current, checkedAt }
+  }
   if (fetched?.status === "ok") return { ...fetched, checkedAt }
-  if (current.status === "ok") return { ...current, checkedAt }
   if (fetched) return fetched
   return current.status === "loading" ? { status: "error" } : current
 }
