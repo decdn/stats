@@ -40,7 +40,8 @@ type TableData = {
   // Distinguishes the honest empty states: no stats to show (loading,
   // unavailable, not indexed yet) vs an indexed chain with no settlements yet.
   emptyLabel: string
-  // Set mid-backfill only; a caught-up index's time is in the hero.
+  // Set only mid-backfill, when the rows are real but not the newest; a
+  // caught-up index's time is in the hero meta.
   footer: string | null
 }
 
@@ -78,9 +79,7 @@ function settlementsData(result: StatsResult): TableData {
       }
     }),
     emptyLabel: "no settlements indexed yet",
-    // Mid-backfill the rows are real but not the newest, so say so rather
-    // than implying a fresh index.
-    footer: stats.caughtUp ? null : `re-indexing · block ${stats.lastBlock}`,
+    footer: stats.caughtUp ? null : `indexing · block ${stats.lastBlock}`,
   }
 }
 

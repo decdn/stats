@@ -84,7 +84,7 @@ Two rules explain most of the structure:
 - **Figures and copy are separated.** `lib/metrics.ts` and `lib/regions.ts` hold only values and statuses (`Metric`, `MetricView`, `RegionRow`, `RegionsView`); even empty-state labels live in the blocks. Headlines, labels, and prose are hardcoded in the block that renders them — so changing what the page _says_ means editing that block, not the data file.
 - **Blocks take no props and own no layout.** Each section's entry component takes no props and reads its own figures with `useStats()`; only the `charts/metric-*-chart.tsx` halves receive `series` from their block. `app/page.tsx` assembles them inside `StatsProvider` and owns all page-level layout (the `max-w-6xl` container, the metrics grid).
 
-The three metric cards are deliberately separate files rather than one parameterized component: each owns its own `ChartConfig`, gradient `id`, and Y-domain math. Each is a client component (`metric-*.tsx`, `useStats()`) paired with its recharts chart (`charts/metric-*-chart.tsx`). Every block that shows live data is a client component; the static HTML is their "loading" state.
+The three metric cards are deliberately separate files rather than one parameterized component: each owns its own `ChartConfig`, series shape (an area with its gradient `id`, or a step line for registered nodes), and Y-domain math. Each is a client component (`metric-*.tsx`, `useStats()`) paired with its recharts chart (`charts/metric-*-chart.tsx`). Every block that shows live data is a client component; the static HTML is their "loading" state.
 
 ## Conventions
 

@@ -13,7 +13,7 @@ import type { MetricPoint } from "@/lib/metrics"
 const chartConfig = {
   value: {
     label: "registered nodes",
-    // Neutral: the accent is reserved for liveness and growth.
+    // Neutral: the accent marks status and growth, not series.
     color: "var(--muted-foreground)",
   },
 } satisfies ChartConfig
@@ -42,8 +42,9 @@ export function RegisteredNodesChart({ series }: { series: MetricPoint[] }) {
           cursor={false}
           content={<ChartTooltipContent indicator="line" />}
         />
-        {/* A count moves in steps; a filled area would make a flat week the
-            heaviest shape in the row. */}
+        {/* A count moves in steps, and the Y domain puts a flat count near
+            the top, so a filled area would make a quiet day the heaviest
+            shape in the row. */}
         <Line
           dataKey="value"
           type="stepAfter"

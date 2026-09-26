@@ -2,11 +2,13 @@
 
 import { useStats, type Stats, type StatsResult } from "@/lib/stats"
 import { cn, formatBytes, formatUsdc, formatUtcTime } from "@/lib/utils"
+import { utcDate } from "@/worker/src/stats"
 
 const explorerUrl = "https://sepolia.arbiscan.io"
 
-// A network with no settlement in this long isn't "on" in any sense a
-// reader would check.
+// No settlement within this long of the worker's last write reads as quiet:
+// a network that hasn't settled in a day isn't "on" in any sense a reader
+// would check.
 const quietAfterSeconds = 24 * 60 * 60
 
 type LastSettlement = {
@@ -16,19 +18,25 @@ type LastSettlement = {
   txHref: string
 }
 
-type HeroState = {
-  headline: string
-  live: boolean
-  meta: string
-  last: LastSettlement | null
-}
+// "on" can't be built without the settlement that backs it.
+type HeroState =
+  | { status: "on"; meta: string; last: LastSettlement }
+  | { status: "quiet"; meta: string; last: LastSettlement | null }
+  | { status: "neutral"; meta: string }
+
+const headlines = {
+  on: "the network is on",
+  quiet: "the network is quiet",
+  neutral: "network status",
+} as const
 
 // The headline is backed by the newest settlement, measured against the
-// worker's last write rather than the wall clock: a stale stats.json means
-// the worker (or the public RPC it reads) is lagging, which says nothing
-// about whether nodes are serving, so index health only ever shows in the
-// meta line. Mid-backfill the newest indexed settlement isn't the newest on
-// chain, so the headline stays neutral until the index catches up.
+// worker's last write (updatedAt), not the wall clock: a stale stats.json
+// means the worker or its RPC is lagging, not that nodes stopped, so a
+// stalled worker leaves the last verdict standing and lag shows only in the
+// meta line's timestamp. The one exception is mid-backfill: the newest
+// indexed settlement isn't the newest on chain, so the headline goes neutral
+// until the index catches up.
 function heroState(result: StatsResult): HeroState {
   if (result.status === "loading") return neutral("loading")
   if (result.status === "error") return neutral("stats unavailable")
@@ -36,27 +44,20 @@ function heroState(result: StatsResult): HeroState {
     return neutral("waiting for the first index")
   }
   const { stats } = result
-  if (!stats.caughtUp) {
-    return neutral(`indexing · block ${stats.lastBlock}`)
-  }
+  if (!stats.caughtUp) return neutral(`indexing · block ${stats.lastBlock}`)
+  // asStats guarantees updatedAt parses (see settle() in lib/stats.tsx).
   const indexedAt = Date.parse(stats.updatedAt) / 1000
+  const meta = `indexed ${formatUtcTime(indexedAt)} utc`
   const latest = stats.settlements.at(0)
-  const live =
-    latest !== undefined &&
-    (Number.isNaN(indexedAt) ||
-      indexedAt - latest.timestamp <= quietAfterSeconds)
-  return {
-    headline: live ? "the network is on" : "the network is quiet",
-    live,
-    meta: Number.isNaN(indexedAt)
-      ? "indexed"
-      : `indexed ${formatUtcTime(indexedAt)} utc`,
-    last: latest ? lastSettlement(latest, indexedAt) : null,
-  }
+  if (!latest) return { status: "quiet", meta, last: null }
+  const last = lastSettlement(latest, indexedAt)
+  return indexedAt - latest.timestamp <= quietAfterSeconds
+    ? { status: "on", meta, last }
+    : { status: "quiet", meta, last }
 }
 
 function neutral(meta: string): HeroState {
-  return { headline: "network status", live: false, meta, last: null }
+  return { status: "neutral", meta }
 }
 
 // Time only when it's the same UTC day as the index, else date and time.
@@ -65,9 +66,7 @@ function lastSettlement(
   indexedAt: number
 ): LastSettlement {
   const at = formatUtcTime(row.timestamp)
-  const sameDay =
-    !Number.isNaN(indexedAt) &&
-    formatUtcTime(indexedAt).startsWith(at.slice(0, 10))
+  const sameDay = utcDate(row.timestamp) === utcDate(indexedAt)
   return {
     when: sameDay ? at.slice(11) : at,
     value: formatUsdc(row.amount),
@@ -77,14 +76,16 @@ function lastSettlement(
 }
 
 export function Hero() {
-  const { headline, live, meta, last } = heroState(useStats())
+  const state = heroState(useStats())
+  const live = state.status === "on"
+  const last = state.status === "neutral" ? null : state.last
   return (
     <section className="pt-6">
       <p className="font-mono text-[11px] tracking-widest text-muted-foreground uppercase">
-        {meta}
+        {state.meta}
       </p>
       <h1 className="mt-6 text-5xl leading-[1.05] font-medium tracking-tight text-balance lowercase sm:text-6xl md:text-7xl">
-        {headline}
+        {headlines[state.status]}
         <span
           aria-hidden="true"
           className={cn(

@@ -41,8 +41,10 @@ export function truncateHex(hex: string, lead = 6, tail = 4) {
   return `${hex.slice(0, lead)}…${hex.slice(-tail)}`
 }
 
-// unix seconds → "2026-09-08 14:12" (UTC). Minutes, not seconds: the
-// indexer runs every 10 minutes, so seconds are false precision.
+// unix seconds → "2026-09-08 14:12" (UTC). Minutes are all a reader needs:
+// index times move in cron ticks (wrangler.jsonc), and a settlement is
+// checked by its tx link, not its second. Callers slice this
+// "YYYY-MM-DD HH:MM" shape (hero, settlements-table).
 export function formatUtcTime(timestamp: number) {
   return new Date(timestamp * 1000).toISOString().slice(0, 16).replace("T", " ")
 }

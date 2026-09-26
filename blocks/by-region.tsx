@@ -62,8 +62,10 @@ export function ByRegion() {
   return (
     <section className="flex w-full flex-col gap-5">
       <SectionHeading title="by region">
-        registered nodes and bytes served, grouped by the region each operator
-        declares on <span className="font-mono">CapacityBond</span>
+        registered nodes, and bytes served from{" "}
+        <span className="font-mono">FeeRouter</span> settlements, grouped by the
+        region each operator declares on{" "}
+        <span className="font-mono">CapacityBond</span>
         {view.status === "ok" && view.staleSince !== null && (
           <>, as of {formatUtcTime(view.staleSince)} utc</>
         )}
