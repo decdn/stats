@@ -13,8 +13,7 @@ import type { MetricPoint } from "@/lib/metrics"
 const chartConfig = {
   value: {
     label: "bytes served",
-    // Neutral: the accent marks status and growth, not series.
-    color: "var(--muted-foreground)",
+    color: "var(--accent-green)",
   },
 } satisfies ChartConfig
 
