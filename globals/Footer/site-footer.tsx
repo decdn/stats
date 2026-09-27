@@ -14,11 +14,12 @@ export function SiteFooter() {
       ? [
           { name: "FeeRouter", address: result.stats.feeRouter },
           { name: "CapacityBond", address: result.stats.capacityBond },
+          { name: "PaymentPool", address: result.stats.paymentPool },
         ]
       : []
   return (
     <footer className="mx-auto mt-16 flex w-full max-w-6xl flex-col gap-3 border-t border-border px-6 pt-6 pb-16 text-sm text-muted-foreground sm:flex-row sm:justify-between">
-      <span>decdn · arbitrum sepolia testnet</span>
+      <span>decdn</span>
       {contracts.length > 0 && (
         <ul className="flex flex-col gap-1 sm:flex-row sm:gap-6">
           {contracts.map((contract) => (
