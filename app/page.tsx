@@ -17,9 +17,11 @@ export default function Page() {
         <SiteHeader />
         <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-16 px-6">
           <Hero />
+          {/* scroll-mt-6 lands the cards as far below the header as the other
+              sections' headings sit below their rule. */}
           <section
             id="metrics"
-            className="grid grid-cols-1 gap-4 md:grid-cols-3"
+            className="grid scroll-mt-6 grid-cols-1 gap-4 md:grid-cols-3"
           >
             <MetricValueSettled />
             <MetricBytesServed />

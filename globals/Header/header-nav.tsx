@@ -15,8 +15,9 @@ const SECTIONS = [
 type SectionId = (typeof SECTIONS)[number]["id"]
 
 // The page's section links. The active one is the last section whose top has
-// reached the header's bottom edge, where an anchor jump lands it; none while
-// the hero shows, and the last at the page bottom, which it can't scroll up to.
+// reached the header's bottom edge plus its own scroll margin, where an anchor
+// jump lands it; none while the hero shows, and the last at the page bottom,
+// which it can't scroll up to.
 export function HeaderNav() {
   const ref = useRef<HTMLElement>(null)
   const [active, setActive] = useState<SectionId | null>(null)
@@ -35,8 +36,10 @@ export function HeaderNav() {
           document.documentElement.scrollHeight - 1
       let next: SectionId | null = null
       for (const { id } of SECTIONS) {
-        const top = document.getElementById(id)?.getBoundingClientRect().top
-        if (top !== undefined && top <= edge) next = id
+        const section = document.getElementById(id)
+        if (!section) continue
+        const margin = parseFloat(getComputedStyle(section).scrollMarginTop)
+        if (section.getBoundingClientRect().top <= edge + margin) next = id
       }
       setActive(atBottom ? SECTIONS[SECTIONS.length - 1].id : next)
     }
