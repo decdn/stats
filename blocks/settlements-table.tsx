@@ -102,7 +102,7 @@ function groupByDate(rows: Row[]) {
 export function SettlementsTable() {
   const { rows: settlements, emptyLabel, footer } = settlementsData(useStats())
   return (
-    <section className="flex w-full flex-col gap-5">
+    <section id="settlements" className="flex w-full flex-col gap-5">
       <SectionHeading title="latest settlements">
         each row is a <span className="font-mono">FeeRouter.Settled</span> log
         on arbitrum sepolia. click a tx to check it.
