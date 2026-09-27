@@ -20,13 +20,15 @@ export function ThemeSwitch() {
 
   return (
     <label className="flex cursor-pointer items-center gap-2 font-mono text-[11px] tracking-widest text-muted-foreground uppercase">
-      dark
+      <span aria-hidden>light</span>
       <Switch
+        aria-label="dark mode"
         checked={mounted && resolvedTheme === "dark"}
         onCheckedChange={(checked) =>
           switchTheme(() => setTheme(checked ? "dark" : "light"))
         }
       />
+      <span aria-hidden>dark</span>
     </label>
   )
 }
