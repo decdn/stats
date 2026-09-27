@@ -8,6 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { DragScroll } from "@/globals/DragScroll/drag-scroll"
 import { SectionHeading } from "@/globals/SectionHeading/section-heading"
 import { useStats, type StatsResult } from "@/lib/stats"
 import {
@@ -107,81 +108,81 @@ export function SettlementsTable() {
         each row is a <span className="font-mono">FeeRouter.Settled</span> log
         on arbitrum sepolia. click a tx to check it.
       </SectionHeading>
-      <Table className="font-mono">
-        <TableHeader>
-          <TableRow>
-            <TableHead className={headClassName}>time (utc)</TableHead>
-            <TableHead className={`${headClassName} hidden sm:table-cell`}>
-              operator
-            </TableHead>
-            <TableHead
-              className={`${headClassName} hidden text-right sm:table-cell`}
-            >
-              bytes
-            </TableHead>
-            <TableHead className={`${headClassName} text-right`}>
-              value (usdc)
-            </TableHead>
-            <TableHead className={`${headClassName} text-right`}>tx</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {settlements.length === 0 && (
+      <DragScroll label="latest settlements table">
+        <Table className="font-mono">
+          <TableHeader>
             <TableRow>
-              <TableCell
-                colSpan={5}
-                className="py-8 text-center text-muted-foreground lowercase"
-              >
-                {emptyLabel}
-              </TableCell>
+              <TableHead className={headClassName}>time (utc)</TableHead>
+              <TableHead className={headClassName}>operator</TableHead>
+              <TableHead className={`${headClassName} text-right`}>
+                bytes
+              </TableHead>
+              <TableHead className={`${headClassName} text-right`}>
+                value (usdc)
+              </TableHead>
+              <TableHead className={`${headClassName} text-right`}>
+                tx
+              </TableHead>
             </TableRow>
-          )}
-          {groupByDate(settlements).map((group) => [
-            <TableRow key={group.date} className="hover:bg-transparent">
-              <TableCell
-                colSpan={5}
-                className="pt-5 pb-2 text-xs text-muted-foreground"
-              >
-                {group.date}
-              </TableCell>
-            </TableRow>,
-            ...group.rows.map((settlement) => (
-              <TableRow key={settlement.key}>
-                <TableCell className="text-muted-foreground tabular-nums">
-                  {settlement.time}
-                </TableCell>
-                <TableCell className="hidden sm:table-cell">
-                  <a
-                    href={settlement.operatorHref}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={linkClassName}
-                  >
-                    {settlement.operator}
-                  </a>
-                </TableCell>
-                <TableCell className="hidden text-right tabular-nums sm:table-cell">
-                  {settlement.bytes}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {settlement.value}
-                </TableCell>
-                <TableCell className="text-right">
-                  <a
-                    href={settlement.txHref}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={linkClassName}
-                  >
-                    {settlement.tx}
-                    <span aria-hidden="true"> ↗</span>
-                  </a>
+          </TableHeader>
+          <TableBody>
+            {settlements.length === 0 && (
+              <TableRow>
+                <TableCell
+                  colSpan={5}
+                  className="py-8 text-center text-muted-foreground lowercase"
+                >
+                  {emptyLabel}
                 </TableCell>
               </TableRow>
-            )),
-          ])}
-        </TableBody>
-      </Table>
+            )}
+            {groupByDate(settlements).map((group) => [
+              <TableRow key={group.date} className="hover:bg-transparent">
+                <TableCell
+                  colSpan={5}
+                  className="pt-5 pb-2 text-xs text-muted-foreground"
+                >
+                  {group.date}
+                </TableCell>
+              </TableRow>,
+              ...group.rows.map((settlement) => (
+                <TableRow key={settlement.key}>
+                  <TableCell className="text-muted-foreground tabular-nums">
+                    {settlement.time}
+                  </TableCell>
+                  <TableCell>
+                    <a
+                      href={settlement.operatorHref}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={linkClassName}
+                    >
+                      {settlement.operator}
+                    </a>
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {settlement.bytes}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {settlement.value}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <a
+                      href={settlement.txHref}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={linkClassName}
+                    >
+                      {settlement.tx}
+                      <span aria-hidden="true"> ↗</span>
+                    </a>
+                  </TableCell>
+                </TableRow>
+              )),
+            ])}
+          </TableBody>
+        </Table>
+      </DragScroll>
       {footer !== null && (
         <p className="font-mono text-[11px] tracking-widest text-muted-foreground uppercase">
           {footer}
