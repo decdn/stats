@@ -49,7 +49,7 @@ export function HeaderShell({ children }: { children: ReactNode }) {
       ref={ref}
       onFocus={() => setHidden(false)}
       className={cn(
-        "sticky top-0 z-40 border-b bg-background transition-[translate,border-color] duration-200 ease-out motion-reduce:transition-none",
+        "sticky top-0 z-40 border-b bg-background transition-[translate,border-color] duration-400 ease-in-out motion-reduce:transition-none",
         scrolled ? "border-border" : "border-transparent",
         hidden && "-translate-y-full"
       )}
