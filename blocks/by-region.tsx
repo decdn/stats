@@ -61,7 +61,7 @@ export function ByRegion() {
   const view = regionsView(useStats())
   const rows = view.status === "ok" ? view.rows : []
   return (
-    <section className="flex w-full flex-col gap-5">
+    <section id="by-region" className="flex w-full flex-col gap-5">
       <SectionHeading title="by region">
         registered nodes, and bytes served from{" "}
         <span className="font-mono">FeeRouter</span> settlements, grouped by the
