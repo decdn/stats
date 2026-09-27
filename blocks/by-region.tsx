@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { DragScroll } from "@/globals/DragScroll/drag-scroll"
 import { SectionHeading } from "@/globals/SectionHeading/section-heading"
 import {
   regionsView,
@@ -71,75 +72,75 @@ export function ByRegion() {
         )}
         .
       </SectionHeading>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className={headClassName}>region</TableHead>
-            <TableHead
-              className={`${headClassName} hidden text-right sm:table-cell`}
-            >
-              nodes
-            </TableHead>
-            <TableHead className={`${headClassName} text-right`}>
-              bytes served
-            </TableHead>
-            <TableHead className={`${headClassName} text-right`}>
-              cache hit
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.length === 0 && (
+      <DragScroll label="by region table">
+        <Table>
+          <TableHeader>
             <TableRow>
-              <TableCell
-                colSpan={4}
-                className="py-8 text-center font-mono text-muted-foreground lowercase"
-              >
-                {emptyLabel(view)}
-              </TableCell>
+              <TableHead className={headClassName}>region</TableHead>
+              <TableHead className={`${headClassName} text-right`}>
+                nodes
+              </TableHead>
+              <TableHead className={`${headClassName} text-right`}>
+                bytes served
+              </TableHead>
+              <TableHead className={`${headClassName} text-right`}>
+                cache hit
+              </TableHead>
             </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.length === 0 && (
+              <TableRow>
+                <TableCell
+                  colSpan={4}
+                  className="py-8 text-center font-mono text-muted-foreground lowercase"
+                >
+                  {emptyLabel(view)}
+                </TableCell>
+              </TableRow>
+            )}
+            {rows.map((region) => (
+              <TableRow key={region.code}>
+                <TableCell className="py-3">
+                  <div className="flex items-baseline gap-2">
+                    <span className="font-mono font-semibold">
+                      {region.code === UNKNOWN_REGION ? "??" : region.code}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {countryName(region.code)}
+                    </span>
+                  </div>
+                </TableCell>
+                <TableCell className={cellClassName}>{region.nodes}</TableCell>
+                <TableCell className={cellClassName}>
+                  {formatBytes(Number(region.bytesServed))}
+                </TableCell>
+                <TableCell className={cellClassName}>
+                  {cacheHit(region)}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+          {view.status === "ok" && rows.length > 0 && (
+            <TableFooter className="bg-transparent text-muted-foreground">
+              <TableRow className="hover:bg-transparent">
+                <TableCell className={`${headClassName} py-3`}>
+                  network
+                </TableCell>
+                <TableCell className={cellClassName}>
+                  {view.network.nodes}
+                </TableCell>
+                <TableCell className={cellClassName}>
+                  {formatBytes(Number(view.network.bytesServed))}
+                </TableCell>
+                <TableCell className={cellClassName}>
+                  {cacheHit(view.network)}
+                </TableCell>
+              </TableRow>
+            </TableFooter>
           )}
-          {rows.map((region) => (
-            <TableRow key={region.code}>
-              <TableCell className="py-3">
-                <div className="flex items-baseline gap-2">
-                  <span className="font-mono font-semibold">
-                    {region.code === UNKNOWN_REGION ? "??" : region.code}
-                  </span>
-                  <span className="hidden text-xs text-muted-foreground sm:inline">
-                    {countryName(region.code)}
-                  </span>
-                </div>
-              </TableCell>
-              <TableCell className={`hidden sm:table-cell ${cellClassName}`}>
-                {region.nodes}
-              </TableCell>
-              <TableCell className={cellClassName}>
-                {formatBytes(Number(region.bytesServed))}
-              </TableCell>
-              <TableCell className={cellClassName}>
-                {cacheHit(region)}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-        {view.status === "ok" && rows.length > 0 && (
-          <TableFooter className="bg-transparent text-muted-foreground">
-            <TableRow className="hover:bg-transparent">
-              <TableCell className={`${headClassName} py-3`}>network</TableCell>
-              <TableCell className={`hidden sm:table-cell ${cellClassName}`}>
-                {view.network.nodes}
-              </TableCell>
-              <TableCell className={cellClassName}>
-                {formatBytes(Number(view.network.bytesServed))}
-              </TableCell>
-              <TableCell className={cellClassName}>
-                {cacheHit(view.network)}
-              </TableCell>
-            </TableRow>
-          </TableFooter>
-        )}
-      </Table>
+        </Table>
+      </DragScroll>
       <div className="flex max-w-[65ch] flex-col gap-2 text-sm leading-relaxed text-muted-foreground">
         <p>
           cache hit is the share of bytes served that a region&apos;s nodes

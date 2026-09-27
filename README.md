@@ -71,7 +71,7 @@ There is no test framework in this project. Verify changes with `pnpm typecheck 
 ```
 app/            layout, globals.css, and page.tsx — the only composition point
 blocks/         page sections (hero, metric-*, by-region, settlements); charts/ holds the metric cards' client charts
-globals/        chrome reused across sections (Header, Footer, SectionHeading)
+globals/        chrome reused across sections (Header, Footer, SectionHeading, Wordmark, DragScroll)
 components/ui/  unmodified shadcn/ui primitives
 lib/stats.tsx   StatsProvider + useStats() — fetches the public stats file in the browser
 worker/src/     the Worker entry and the indexer (cron → R2)
