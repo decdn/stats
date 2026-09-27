@@ -10,10 +10,10 @@ import {
 
 import { cn } from "@/lib/utils"
 
-// Past this many pixels a mouse press is a drag, not a click.
+// A mouse press that moves this many pixels sideways is a drag, not a click.
 const dragThreshold = 4
 
-// A horizontal scroller for a table wider than the screen: touch swipes it
+// A horizontal scroller for a table wider than its container: touch swipes it
 // natively, a mouse drags it, and an edge fades while there's more that way.
 // It takes over from shadcn's own table container, which would otherwise be a
 // second, nested scroller.
@@ -25,54 +25,69 @@ export function DragScroll({
   children: ReactNode
 }) {
   const ref = useRef<HTMLDivElement>(null)
-  const [edges, setEdges] = useState({ left: false, right: false })
+  const [fadeLeft, setFadeLeft] = useState(false)
+  const [fadeRight, setFadeRight] = useState(false)
   const [dragging, setDragging] = useState(false)
-  const scrollable = edges.left || edges.right
+  const scrollable = fadeLeft || fadeRight
 
   useEffect(() => {
     const scroller = ref.current
     if (!scroller) return
-    // Scroll events and ResizeObserver callbacks already arrive at most once
-    // a frame, and setEdges bails out when nothing changed.
+    // No requestAnimationFrame throttle: scroll events and ResizeObserver
+    // callbacks already arrive once a frame, and the setters bail out when
+    // nothing changed.
     const update = () => {
       const max = scroller.scrollWidth - scroller.clientWidth
-      // Sub-pixel widths leave scrollLeft a fraction short of max at the end.
-      const left = scroller.scrollLeft > 1
-      const right = scroller.scrollLeft < max - 1
-      setEdges((prev) =>
-        prev.left === left && prev.right === right ? prev : { left, right }
-      )
+      // Allow 1px either way: sub-pixel widths leave scrollLeft a fraction
+      // short of max at the end.
+      setFadeLeft(scroller.scrollLeft > 1)
+      setFadeRight(scroller.scrollLeft < max - 1)
     }
 
     update()
-    scroller.addEventListener("scroll", update, { passive: true })
-    // The table resizes as stats load and rows change, the scroller with the
-    // viewport. Watch the <table> itself: shadcn's container around it stays
-    // the scroller's width while the table overflows it.
+    const listeners = new AbortController()
+    scroller.addEventListener("scroll", update, {
+      passive: true,
+      signal: listeners.signal,
+    })
+    // The table resizes as stats load and rows change, and the scroller
+    // resizes with the viewport. Watch the <table> itself, which both blocks
+    // always render: with the overflow-visible override below, shadcn's
+    // container around it stays the scroller's width while it overflows.
     const observer = new ResizeObserver(update)
     observer.observe(scroller)
     const table = scroller.querySelector("table")
     if (table) observer.observe(table)
     return () => {
-      scroller.removeEventListener("scroll", update)
+      listeners.abort()
       observer.disconnect()
     }
   }, [])
 
   const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     const scroller = ref.current
-    // Touch and pen scroll natively.
     if (!scroller || !scrollable) return
+    // Touch and pen scroll natively.
     if (event.pointerType !== "mouse" || event.button !== 0) return
+    // A press below the content box is on the native scrollbar, which scrolls
+    // by itself.
+    const { top } = scroller.getBoundingClientRect()
+    if (event.clientY >= top + scroller.clientTop + scroller.clientHeight) {
+      return
+    }
 
     const startX = event.clientX
     const startLeft = scroller.scrollLeft
     let moved = false
+    const drag = new AbortController()
 
     const onMove = (move: PointerEvent) => {
+      // The button came up where the page didn't see it (a context menu, an
+      // app switch), so no pointerup ends the drag.
+      if ((move.buttons & 1) === 0) return onUp()
       const dx = move.clientX - startX
-      if (!moved && Math.abs(dx) < dragThreshold) return
       if (!moved) {
+        if (Math.abs(dx) < dragThreshold) return
         moved = true
         setDragging(true)
         window.getSelection()?.removeAllRanges()
@@ -81,14 +96,12 @@ export function DragScroll({
     }
 
     const onUp = () => {
-      window.removeEventListener("pointermove", onMove)
-      window.removeEventListener("pointerup", onUp)
-      window.removeEventListener("pointercancel", onUp)
+      drag.abort()
       if (!moved) return
       setDragging(false)
-      // Releasing a drag over a link would otherwise open it. The click
-      // follows pointerup in the same task, so the timeout only disarms this
-      // when the release landed where no click fires.
+      // A drag that starts and ends on the same link would still click it.
+      // The click follows pointerup in the same task, so the timeout only
+      // disarms this when the release landed where no click fires.
       const swallow = (click: MouseEvent) => {
         click.preventDefault()
         click.stopPropagation()
@@ -99,38 +112,35 @@ export function DragScroll({
       )
     }
 
-    window.addEventListener("pointermove", onMove)
-    window.addEventListener("pointerup", onUp)
-    window.addEventListener("pointercancel", onUp)
+    window.addEventListener("pointermove", onMove, { signal: drag.signal })
+    window.addEventListener("pointerup", onUp, { signal: drag.signal })
+    window.addEventListener("pointercancel", onUp, { signal: drag.signal })
   }
 
-  const fadeLeft = edges.left ? "transparent, black 2rem" : "black"
-  const fadeRight = edges.right
-    ? "black calc(100% - 2rem), transparent"
-    : "black"
-  const mask = scrollable
-    ? `linear-gradient(to right, ${fadeLeft}, ${fadeRight})`
-    : undefined
-
   return (
-    <div
-      ref={ref}
-      role="region"
-      aria-label={label}
-      // Focusable only while there's something to scroll with the arrow keys.
-      tabIndex={scrollable ? 0 : undefined}
-      onPointerDown={onPointerDown}
-      // A dragged link or selection would start a native drag and cancel
-      // ours.
-      onDragStart={scrollable ? (event) => event.preventDefault() : undefined}
-      style={{ maskImage: mask, WebkitMaskImage: mask }}
-      className={cn(
-        "w-full overflow-x-auto overscroll-x-contain rounded-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:ring-inset [&>[data-slot=table-container]]:overflow-visible",
-        scrollable && "cursor-grab",
-        dragging && "cursor-grabbing select-none"
-      )}
-    >
-      {children}
+    // The focus ring sits on this unmasked wrapper, where the edge fade can't
+    // hide it.
+    <div className="rounded-sm has-[>:focus-visible]:ring-[3px] has-[>:focus-visible]:ring-ring/50">
+      <div
+        ref={ref}
+        role="region"
+        aria-label={label}
+        // Focusable only while there's something to scroll with the arrow
+        // keys.
+        tabIndex={scrollable ? 0 : undefined}
+        onPointerDown={onPointerDown}
+        // A native drag of a link or selection would cancel ours.
+        onDragStart={scrollable ? (event) => event.preventDefault() : undefined}
+        className={cn(
+          "w-full overflow-x-auto overscroll-x-contain outline-none *:data-[slot=table-container]:overflow-visible",
+          fadeLeft && "mask-l-from-[calc(100%-2rem)]",
+          fadeRight && "mask-r-from-[calc(100%-2rem)]",
+          scrollable && "cursor-grab",
+          dragging && "cursor-grabbing select-none"
+        )}
+      >
+        {children}
+      </div>
     </div>
   )
 }
