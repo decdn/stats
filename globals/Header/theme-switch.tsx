@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react"
 import { useTheme } from "next-themes"
 
+import { switchTheme } from "@/components/theme-provider"
 import { Switch } from "@/components/ui/switch"
 
 const subscribe = () => () => {}
@@ -22,7 +23,9 @@ export function ThemeSwitch() {
       dark
       <Switch
         checked={mounted && resolvedTheme === "dark"}
-        onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
+        onCheckedChange={(checked) =>
+          switchTheme(() => setTheme(checked ? "dark" : "light"))
+        }
       />
     </label>
   )
