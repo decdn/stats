@@ -130,3 +130,10 @@
     @apply font-sans;
   }
 }
+
+/* The theme change crossfades (see `switchTheme` in components/theme-provider). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 350ms;
+  animation-timing-function: ease-in-out;
+}

@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { flushSync } from "react-dom"
 import { ThemeProvider as NextThemesProvider, useTheme } from "next-themes"
 
 function ThemeProvider({
@@ -19,6 +20,27 @@ function ThemeProvider({
       {children}
     </NextThemesProvider>
   )
+}
+
+// Crossfades the whole page into the new theme with a view transition. The
+// provider keeps `disableTransitionOnChange`, so elements don't animate their
+// own colors on top of it. Without view transitions, or with reduced motion,
+// the theme just switches.
+function switchTheme(apply: () => void) {
+  if (
+    !document.startViewTransition ||
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  ) {
+    apply()
+    return
+  }
+
+  // next-themes sets the class in an effect; flushSync commits it before the
+  // transition snapshots the new state. A skipped transition (hidden tab, or a
+  // second toggle mid-fade) rejects `ready`, but the theme still applies.
+  document
+    .startViewTransition(() => flushSync(apply))
+    .ready.catch(() => {})
 }
 
 function isTypingTarget(target: EventTarget | null) {
@@ -55,7 +77,7 @@ function ThemeHotkey() {
         return
       }
 
-      setTheme(resolvedTheme === "dark" ? "light" : "dark")
+      switchTheme(() => setTheme(resolvedTheme === "dark" ? "light" : "dark"))
     }
 
     window.addEventListener("keydown", onKeyDown)
@@ -68,4 +90,4 @@ function ThemeHotkey() {
   return null
 }
 
-export { ThemeProvider }
+export { ThemeProvider, switchTheme }
