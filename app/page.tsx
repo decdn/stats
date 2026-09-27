@@ -15,15 +15,17 @@ export default function Page() {
     <StatsProvider>
       <div className="flex min-h-svh flex-col bg-background">
         <SiteHeader />
-        <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-16 px-6">
-          <Hero />
-          <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <MetricValueSettled />
-            <MetricBytesServed />
-            <MetricRegisteredNodes />
-          </section>
-          <ByRegion />
-          <SettlementsTable />
+        <main className="flex flex-1 flex-col px-frame-gutter">
+          <div className="mx-auto flex w-full max-w-frame flex-1 flex-col gap-16">
+            <Hero />
+            <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <MetricValueSettled />
+              <MetricBytesServed />
+              <MetricRegisteredNodes />
+            </section>
+            <ByRegion />
+            <SettlementsTable />
+          </div>
         </main>
         <SiteFooter />
       </div>
