@@ -1,45 +1,33 @@
-"use client"
+// Modeled on the decdn website footer: a rule, then copyright, tagline and
+// links, one column on narrow containers and three from @md.
+const LINKS = [
+  { href: "https://github.com/decdn", label: "github" },
+  { href: "https://docs.decdn.org/overview/introduction", label: "docs" },
+  { href: "https://decdn.org", label: "website" },
+] as const
 
-import { Wordmark } from "@/globals/Wordmark/wordmark"
-import { useStats } from "@/lib/stats"
-import { truncateHex } from "@/lib/utils"
-
-const explorerAddressUrl = "https://sepolia.arbiscan.io/address/"
-
-// The contracts every figure is read from, taken from stats.json so they
-// always name the deployment that was actually indexed.
 export function SiteFooter() {
-  const result = useStats()
-  const contracts =
-    result.status === "ok"
-      ? [
-          { name: "FeeRouter", address: result.stats.feeRouter },
-          { name: "CapacityBond", address: result.stats.capacityBond },
-          { name: "PaymentPool", address: result.stats.paymentPool },
-        ]
-      : []
   return (
-    <footer className="mx-auto mt-16 flex w-full max-w-6xl flex-col gap-3 border-t border-border px-6 pt-6 pb-16 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-      <a href="https://decdn.org" className="self-start sm:self-auto">
-        <Wordmark />
-      </a>
-      {contracts.length > 0 && (
-        <ul className="flex flex-col gap-1 sm:flex-row sm:gap-6">
-          {contracts.map((contract) => (
-            <li key={contract.name}>
-              {contract.name}{" "}
-              <a
-                href={`${explorerAddressUrl}${contract.address}`}
-                target="_blank"
-                rel="noreferrer"
-                className="font-mono text-foreground underline-offset-4 hover:underline"
-              >
-                {truncateHex(contract.address)}
+    <footer className="mx-auto mt-16 w-full max-w-6xl px-6 pb-10 text-foreground">
+      <div className="@container flex flex-col gap-3">
+        <span aria-hidden className="block h-px w-full bg-current opacity-40" />
+        <div className="grid grid-cols-1 gap-6 text-[11px] tracking-[0.2em] uppercase opacity-80 @md:grid-cols-3 @md:items-start @md:gap-2">
+          <span>© decdn labs · open source</span>
+          <span className="@md:text-center">
+            built in rust · probably over-engineered
+          </span>
+          <nav
+            aria-label="Resources"
+            className="flex flex-col gap-2 @md:items-end @md:justify-self-end"
+          >
+            {LINKS.map(({ href, label }) => (
+              <a key={label} href={href}>
+                {label}
               </a>
-            </li>
-          ))}
-        </ul>
-      )}
+            ))}
+          </nav>
+        </div>
+      </div>
     </footer>
   )
 }
