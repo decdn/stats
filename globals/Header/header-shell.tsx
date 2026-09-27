@@ -48,14 +48,10 @@ export function HeaderShell({ children }: { children: ReactNode }) {
     <header
       ref={ref}
       onFocus={() => setHidden(false)}
-      // A transition takes the timing of the state it moves into: hiding is
-      // brisk, showing is slower and eases out so it settles into place.
       className={cn(
-        "sticky top-0 z-40 border-b bg-background transition-[translate,border-color] motion-reduce:transition-none",
+        "sticky top-0 z-40 border-b bg-background transition-[translate,border-color] duration-200 ease-out motion-reduce:transition-none",
         scrolled ? "border-border" : "border-transparent",
-        hidden
-          ? "-translate-y-full duration-200 ease-in"
-          : "duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
+        hidden && "-translate-y-full"
       )}
     >
       {children}
