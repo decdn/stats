@@ -17,7 +17,10 @@ export default function Page() {
         <SiteHeader />
         <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-16 px-6">
           <Hero />
-          <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <section
+            id="metrics"
+            className="grid grid-cols-1 gap-4 md:grid-cols-3"
+          >
             <MetricValueSettled />
             <MetricBytesServed />
             <MetricRegisteredNodes />
