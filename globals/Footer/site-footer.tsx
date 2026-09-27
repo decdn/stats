@@ -1,6 +1,6 @@
-// Modeled on the decdn website footer (decdn/website
-// components/site/Footer.tsx): a rule, then copyright, tagline and links, one
-// column on narrow containers and three from @md.
+// Modeled on the decdn website footer, components/site/Footer.tsx in
+// decdn/website: a rule, then copyright, tagline and links, one column on
+// narrow containers and three from @md.
 const LINKS = [
   { href: "https://github.com/decdn", label: "github" },
   { href: "https://docs.decdn.org/overview/introduction", label: "docs" },
