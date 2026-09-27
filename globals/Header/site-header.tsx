@@ -2,7 +2,7 @@ import { Wordmark } from "@/globals/Wordmark/wordmark"
 
 export function SiteHeader() {
   return (
-    <header className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-6">
+    <header className="mx-auto flex h-24 w-full max-w-6xl items-center justify-between px-6">
       <a href="https://decdn.org">
         <Wordmark />
       </a>
