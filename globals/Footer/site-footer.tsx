@@ -1,5 +1,6 @@
-// Modeled on the decdn website footer: a rule, then copyright, tagline and
-// links, one column on narrow containers and three from @md.
+// Modeled on the decdn website footer (decdn/website
+// components/site/Footer.tsx): a rule, then copyright, tagline and links, one
+// column on narrow containers and three from @md.
 const LINKS = [
   { href: "https://github.com/decdn", label: "github" },
   { href: "https://docs.decdn.org/overview/introduction", label: "docs" },
@@ -21,7 +22,11 @@ export function SiteFooter() {
             className="flex flex-col gap-2 @md:items-end @md:justify-self-end"
           >
             {LINKS.map(({ href, label }) => (
-              <a key={label} href={href}>
+              <a
+                key={label}
+                href={href}
+                className="outline-offset-4 focus-visible:outline-1 focus-visible:outline-current focus-visible:outline-dashed"
+              >
                 {label}
               </a>
             ))}
