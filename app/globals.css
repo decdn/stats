@@ -126,8 +126,9 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* Keeps find-in-page and focus scrolling clear of the sticky header. */
   html {
-    @apply font-sans;
+    @apply scroll-pt-24 font-sans;
   }
 }
 

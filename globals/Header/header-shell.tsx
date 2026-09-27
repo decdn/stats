@@ -18,13 +18,16 @@ export function HeaderShell({ children }: { children: ReactNode }) {
 
     const update = () => {
       frame = 0
-      // Clamp so overscroll bounce past either end doesn't read as a reversal.
+      // Rubber-band overscroll (Safari) reports scrollY past the page; clamp
+      // it so the bounce back from the bottom doesn't read as a scroll up.
       const maxY = document.documentElement.scrollHeight - window.innerHeight
       const y = Math.min(Math.max(window.scrollY, 0), maxY)
       const header = ref.current
       const height = header?.offsetHeight ?? 0
-      // Keyboard focus inside the header keeps it on screen.
-      const focused = !!header?.contains(document.activeElement)
+      // Keyboard focus inside the header keeps it on screen. :focus-visible
+      // skips mouse focus, which a clicked switch or link would otherwise keep
+      // until the next click elsewhere, pinning the header.
+      const focused = !!header?.querySelector(":focus-visible")
 
       setScrolled(y > 0)
       if (y <= height || y < lastY || focused) setHidden(false)
@@ -47,6 +50,7 @@ export function HeaderShell({ children }: { children: ReactNode }) {
   return (
     <header
       ref={ref}
+      // Tabbing into a hidden header brings it back.
       onFocus={() => setHidden(false)}
       className={cn(
         "sticky top-0 z-40 border-b bg-background transition-[translate,border-color] duration-400 ease-in-out motion-reduce:transition-none",
