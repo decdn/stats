@@ -57,7 +57,11 @@ export function Hero() {
           aria-hidden="true"
           className={cn(
             "ml-2 inline-block size-3 align-baseline md:size-4",
-            live ? "bg-accent-green" : "bg-muted-foreground/40"
+            result.status === "loading"
+              ? "animate-cursor bg-foreground"
+              : live
+                ? "bg-accent-green"
+                : "bg-muted-foreground/40"
           )}
         />
         <span className="sr-only">.</span>

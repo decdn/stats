@@ -13,6 +13,7 @@ import {
   registeredNodesMetric,
   type MetricView,
 } from "@/lib/metrics"
+import { Cursor } from "@/globals/Cursor/cursor"
 import { useStats } from "@/lib/stats"
 import { cn, enterClass, formatUtcTime } from "@/lib/utils"
 
@@ -76,6 +77,7 @@ export function MetricRegisteredNodes() {
         ) : (
           <p className="flex h-24 items-center justify-center font-mono text-xs text-muted-foreground lowercase">
             {emptyLabel(view)}
+            {view.status === "loading" && <Cursor />}
           </p>
         )}
       </CardContent>

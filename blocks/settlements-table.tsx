@@ -8,6 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Cursor } from "@/globals/Cursor/cursor"
 import { DragScroll } from "@/globals/DragScroll/drag-scroll"
 import { SectionHeading } from "@/globals/SectionHeading/section-heading"
 import { useStats, type StatsResult } from "@/lib/stats"
@@ -136,6 +137,7 @@ export function SettlementsTable() {
                   className="py-8 text-center text-muted-foreground lowercase"
                 >
                   {emptyLabel}
+                  {result.status === "loading" && <Cursor />}
                 </TableCell>
               </TableRow>
             )}
