@@ -180,7 +180,9 @@
 /* Live sections enter in one of two ways. Loading copy waits out the first
    beat, so a fast fetch never flashes it, and fades in only on a slow one.
    Anything else fades in when it replaces the loading frame. The two use
-   different keyframes so switching classes restarts the animation. */
+   different keyframes so switching classes restarts the animation. Under
+   reduced motion the fades drop out: loading copy still holds back, then
+   appears at once, and arriving content shows immediately. */
 @keyframes loading-in {
   from {
     opacity: 0;
@@ -195,10 +197,16 @@
 
 @utility animate-loading {
   animation: loading-in 300ms ease-out 800ms both;
+  @media (prefers-reduced-motion: reduce) {
+    animation-duration: 0s;
+  }
 }
 
 @utility animate-arrive {
   animation: arrive-in 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
 }
 
 /* The block cursor: blinks hard on and off, like a terminal's, while the page
