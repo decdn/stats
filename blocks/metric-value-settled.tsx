@@ -63,7 +63,7 @@ export function MetricValueSettled() {
           </p>
         )}
         {metric ? (
-          <ValueSettledChart series={metric.series} />
+          <ValueSettledChart series={metric.series} unit={metric.unit} />
         ) : (
           <p className="flex h-24 items-center justify-center font-mono text-xs text-muted-foreground lowercase">
             {emptyLabel(view)}

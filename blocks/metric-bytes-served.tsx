@@ -63,7 +63,7 @@ export function MetricBytesServed() {
           </p>
         )}
         {metric ? (
-          <BytesServedChart series={metric.series} />
+          <BytesServedChart series={metric.series} unit={metric.unit} />
         ) : (
           <p className="flex h-24 items-center justify-center font-mono text-xs text-muted-foreground lowercase">
             {emptyLabel(view)}
