@@ -19,15 +19,19 @@ export function SiteFooter() {
           </span>
           <nav
             aria-label="Resources"
-            className="flex flex-col gap-2 @md:items-end @md:justify-self-end"
+            className="flex flex-col items-start gap-3 @md:items-end @md:justify-self-end"
           >
             {LINKS.map(({ href, label }) => (
               <a
                 key={label}
                 href={href}
-                className="outline-offset-4 focus-visible:outline-1 focus-visible:outline-current focus-visible:outline-dashed"
+                className="group relative inline-flex pb-1 leading-none outline-offset-4 focus-visible:outline-1 focus-visible:outline-current focus-visible:outline-dashed"
               >
                 {label}
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-x-0 bottom-0 h-px origin-left scale-x-0 bg-current transition-[scale] duration-260 ease-[cubic-bezier(0.2,0.8,0.2,1)] group-hover:scale-x-100 motion-reduce:transition-none"
+                />
               </a>
             ))}
           </nav>
