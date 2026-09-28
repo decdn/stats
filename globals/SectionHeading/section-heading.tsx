@@ -14,7 +14,7 @@ export function SectionHeading({
       <h2 className="text-2xl font-medium tracking-tight text-balance lowercase sm:text-3xl">
         {title}
       </h2>
-      <p className="mt-2 max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
+      <p className="mt-2 max-w-[65ch] text-base leading-relaxed text-muted-foreground">
         {children}
       </p>
     </header>

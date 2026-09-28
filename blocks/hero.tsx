@@ -62,7 +62,7 @@ export function Hero() {
         />
         <span className="sr-only">.</span>
       </h1>
-      <p className="mt-6 max-w-[60ch] text-sm leading-relaxed text-muted-foreground">
+      <p className="mt-6 max-w-[60ch] text-base leading-relaxed text-muted-foreground">
         you don&apos;t have to trust us. every figure below is read from
         contract logs on arbitrum sepolia, nothing annualized or projected, and
         every settlement links to its transaction.
