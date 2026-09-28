@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { Cursor } from "@/globals/Cursor/cursor"
 import { metricView, bytesServedMetric, type MetricView } from "@/lib/metrics"
 import { useStats } from "@/lib/stats"
 import { cn, enterClass, formatUtcTime } from "@/lib/utils"
@@ -73,6 +74,7 @@ export function MetricBytesServed() {
         ) : (
           <p className="flex h-24 items-center justify-center font-mono text-xs text-muted-foreground lowercase">
             {emptyLabel(view)}
+            {view.status === "loading" && <Cursor />}
           </p>
         )}
       </CardContent>

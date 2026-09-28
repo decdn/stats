@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Cursor } from "@/globals/Cursor/cursor"
 import { DragScroll } from "@/globals/DragScroll/drag-scroll"
 import { SectionHeading } from "@/globals/SectionHeading/section-heading"
 import {
@@ -97,6 +98,7 @@ export function ByRegion() {
                   className="py-8 text-center font-mono text-muted-foreground lowercase"
                 >
                   {emptyLabel(view)}
+                  {view.status === "loading" && <Cursor />}
                 </TableCell>
               </TableRow>
             )}
