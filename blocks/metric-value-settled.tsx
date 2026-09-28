@@ -41,12 +41,8 @@ export function MetricValueSettled() {
       </CardHeader>
       <CardContent>
         <div className="flex items-baseline gap-1.5">
-          <span className="text-5xl font-medium tracking-tight tabular-nums md:text-6xl">
-            {metric?.value ?? "—"}
-          </span>
-          {metric?.unit && (
-            <span className="text-xl text-muted-foreground">{metric.unit}</span>
-          )}
+          <span className="type-figure">{metric?.value ?? "—"}</span>
+          {metric?.unit && <span className="type-unit">{metric.unit}</span>}
         </div>
         {metric?.delta && staleSince === null && (
           <p className="text-sm">
@@ -75,7 +71,7 @@ export function MetricValueSettled() {
         )}
       </CardContent>
       <CardFooter>
-        <p className="font-mono text-[11px]">
+        <p className="font-mono text-micro tracking-normal">
           <span className="text-muted-foreground">event</span>{" "}
           <span className="text-foreground">
             FeeRouter.Settled · field amount

@@ -67,7 +67,7 @@ export function HeaderNav() {
               <a
                 href={`#${id}`}
                 aria-current={current ? "true" : undefined}
-                className="group relative inline-flex items-center pb-1 text-[11px] leading-none font-medium tracking-[0.2em] uppercase outline-offset-4 focus-visible:outline-1 focus-visible:outline-current focus-visible:outline-dashed"
+                className="group relative inline-flex items-center pb-1 text-micro leading-none font-medium uppercase outline-offset-4 focus-visible:outline-1 focus-visible:outline-current focus-visible:outline-dashed"
               >
                 <span
                   className={cn(

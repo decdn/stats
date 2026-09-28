@@ -84,8 +84,9 @@ function settlementsData(result: StatsResult): TableData {
   }
 }
 
-const headClassName =
-  "font-mono text-[11px] tracking-widest text-muted-foreground uppercase"
+// text-muted-foreground repeats type-micro's color so cn drops TableHead's
+// text-foreground, which would otherwise win in the stylesheet.
+const headClassName = "type-micro text-muted-foreground"
 
 const linkClassName = "underline-offset-4 hover:underline"
 
@@ -183,11 +184,7 @@ export function SettlementsTable() {
           </TableBody>
         </Table>
       </DragScroll>
-      {footer !== null && (
-        <p className="font-mono text-[11px] tracking-widest text-muted-foreground uppercase">
-          {footer}
-        </p>
-      )}
+      {footer !== null && <p className="type-micro">{footer}</p>}
     </section>
   )
 }

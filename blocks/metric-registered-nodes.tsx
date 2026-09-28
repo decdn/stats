@@ -45,9 +45,7 @@ export function MetricRegisteredNodes() {
       </CardHeader>
       <CardContent>
         <div className="flex items-baseline gap-1.5">
-          <span className="text-5xl font-medium tracking-tight tabular-nums md:text-6xl">
-            {metric?.value ?? "—"}
-          </span>
+          <span className="type-figure">{metric?.value ?? "—"}</span>
         </div>
         {metric?.delta && staleSince === null && (
           <p className="text-sm">
@@ -76,7 +74,7 @@ export function MetricRegisteredNodes() {
         )}
       </CardContent>
       <CardFooter>
-        <p className="font-mono text-[11px]">
+        <p className="font-mono text-micro tracking-normal">
           <span className="text-muted-foreground">events</span>{" "}
           <span className="text-foreground">
             CapacityBond.NodeRegistered · NodeDeregistered · NodeAutoEjected

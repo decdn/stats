@@ -12,6 +12,10 @@
      in sync with it so the two sites' content lines up at every width. */
   --container-frame: 1280px;
   --spacing-frame-gutter: clamp(1.5rem, 4vw, 4rem);
+  /* The metadata size: text-micro, with its wide tracking built in. The
+     type-* text roles further down build on it and the default scale. */
+  --text-micro: 11px;
+  --text-micro--letter-spacing: 0.2em;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -135,6 +139,37 @@
   html {
     @apply scroll-pt-24 font-sans;
   }
+}
+
+/* Text roles: the page's recurring type, one class each. They're named type-*
+   rather than text-* because cn reads an unknown text-* class as a color and
+   would drop it next to text-muted-foreground. */
+
+/* Uppercase mono metadata: the hero meta line, table heads, the theme switch. */
+@utility type-micro {
+  @apply font-mono text-micro text-muted-foreground uppercase;
+}
+
+/* Muted running text: the hero intro, section descriptions, notes. */
+@utility type-prose {
+  @apply text-base leading-relaxed text-muted-foreground;
+}
+
+@utility type-h1 {
+  @apply text-5xl leading-[1.05] font-medium tracking-tight sm:text-6xl md:text-7xl;
+}
+
+@utility type-h2 {
+  @apply text-2xl font-medium tracking-tight sm:text-3xl;
+}
+
+/* A metric card's headline figure, and the unit beside it. */
+@utility type-figure {
+  @apply text-5xl font-medium tracking-tight tabular-nums md:text-6xl;
+}
+
+@utility type-unit {
+  @apply text-xl text-muted-foreground;
 }
 
 /* The theme change crossfades (see `switchTheme` in components/theme-provider). */
