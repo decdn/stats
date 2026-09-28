@@ -4,14 +4,20 @@ import type { ComponentProps } from "react"
 
 import { ChartTooltipContent } from "@/components/ui/chart"
 
-type MetricTooltipProps = ComponentProps<typeof ChartTooltipContent> & {
+// Omits the shadcn props this tooltip sets or draws itself, so passing one is
+// a type error rather than silently ignored.
+type MetricTooltipProps = Omit<
+  ComponentProps<typeof ChartTooltipContent>,
+  "formatter" | "indicator" | "hideLabel" | "labelFormatter"
+> & {
   seriesLabel: string
   unit?: string
   fractionDigits?: number
 }
 
-// A metric chart's hover card: the hour, then the series name and its value
-// in the headline's unit and precision. Rendered through the shadcn tooltip's
+// A single-series metric chart's hover card: the hour, then the series name
+// and its value in the headline's unit and precision, with the headline's
+// locale-free number format. Rendered through the shadcn tooltip's
 // `formatter`, which replaces its whole row, so the row redraws the line
 // indicator and the hour label itself.
 export function MetricTooltipContent({
@@ -36,10 +42,7 @@ export function MetricTooltipContent({
               <span className="text-muted-foreground">{seriesLabel}</span>
             </div>
             <span className="font-mono font-medium text-foreground tabular-nums">
-              {Number(value).toLocaleString("en-US", {
-                minimumFractionDigits: fractionDigits,
-                maximumFractionDigits: fractionDigits,
-              })}
+              {Number(value).toFixed(fractionDigits)}
               {unit && (
                 <span className="ml-1 text-muted-foreground">{unit}</span>
               )}
