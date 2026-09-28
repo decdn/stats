@@ -141,7 +141,7 @@ export function ByRegion() {
           )}
         </Table>
       </DragScroll>
-      <div className="flex flex-col gap-2 text-sm leading-relaxed text-muted-foreground">
+      <div className="flex flex-col gap-2 text-base leading-relaxed text-muted-foreground">
         <p>
           cache hit is the share of bytes served that a region&apos;s nodes
           didn&apos;t pay a peer to pull, from{" "}
