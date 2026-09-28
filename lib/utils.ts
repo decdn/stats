@@ -1,5 +1,12 @@
 export { cn } from "cn"
 
+// The entrance for a live section's content (see animate-loading and
+// animate-arrive in app/globals.css): loading copy holds back a beat, and
+// whatever replaces it fades in.
+export function enterClass(loading: boolean) {
+  return loading ? "animate-loading" : "animate-arrive"
+}
+
 const byteUnits = ["B", "KB", "MB", "GB", "TB", "PB"]
 
 // Raw byte count → value in the largest base-1000 unit (up to PB) that keeps

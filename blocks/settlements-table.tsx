@@ -14,6 +14,7 @@ import { useStats, type StatsResult } from "@/lib/stats"
 import {
   formatBytes,
   formatUsdc,
+  enterClass,
   formatUtcTime,
   truncateHex,
 } from "@/lib/utils"
@@ -102,7 +103,8 @@ function groupByDate(rows: Row[]) {
 }
 
 export function SettlementsTable() {
-  const { rows: settlements, emptyLabel, footer } = settlementsData(useStats())
+  const result = useStats()
+  const { rows: settlements, emptyLabel, footer } = settlementsData(result)
   return (
     <section id="settlements" className="flex w-full flex-col gap-5">
       <SectionHeading title="latest settlements">
@@ -126,7 +128,7 @@ export function SettlementsTable() {
               </TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <TableBody className={enterClass(result.status === "loading")}>
             {settlements.length === 0 && (
               <TableRow>
                 <TableCell
@@ -184,7 +186,9 @@ export function SettlementsTable() {
           </TableBody>
         </Table>
       </DragScroll>
-      {footer !== null && <p className="type-micro">{footer}</p>}
+      {footer !== null && (
+        <p className={`type-micro ${enterClass(false)}`}>{footer}</p>
+      )}
     </section>
   )
 }
