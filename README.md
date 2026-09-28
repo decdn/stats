@@ -90,7 +90,7 @@ The three metric cards are deliberately separate files rather than one parameter
 
 - Charts are recharts inside shadcn's `ChartContainer`; series colors come from `ChartConfig` and are read in JSX as `var(--color-<dataKey>)`.
 - Design tokens are CSS variables in `app/globals.css` (`:root` / `.dark`), mapped into Tailwind v4 via `@theme inline`. There is no `tailwind.config`. `--accent-green` is the one non-neutral accent — use tokens (`text-muted-foreground`, `bg-accent-green`) rather than raw colors.
-- Visual voice: lowercase copy, `font-mono` uppercase micro-labels with wide tracking for metadata, `tabular-nums` for figures.
+- Visual voice: lowercase copy, `type-micro` labels (mono, uppercase, wide tracking) for metadata, `tabular-nums` for figures. The recurring text roles are `type-*` utilities in `app/globals.css`.
 - Import paths use the `@/*` alias rooted at the project directory.
 - Prettier: no semicolons, double quotes, 2-space indent, 80 columns, with `prettier-plugin-tailwindcss` sorting classes.
 - Commits follow Conventional Commits, checked by the `commit-msg` hook (`@commitlint/config-conventional`): a type from `feat`, `fix`, `refactor`, `chore`, `docs`, `style`, `perf`, `test`, `build`, `ci`, `revert`; a subject not in sentence, start, pascal or upper case; header and body lines of at most 100 characters. The hook is local, so a squash merge's title (the PR title) is never checked.

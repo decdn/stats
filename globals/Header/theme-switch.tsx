@@ -19,7 +19,7 @@ export function ThemeSwitch() {
   )
 
   return (
-    <label className="flex cursor-pointer items-center gap-2 font-mono text-[11px] tracking-widest text-muted-foreground uppercase">
+    <label className="flex cursor-pointer items-center gap-2 type-micro">
       <span aria-hidden>light</span>
       <Switch
         aria-label="dark mode"

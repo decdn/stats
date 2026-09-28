@@ -20,8 +20,9 @@ import {
 import { useStats } from "@/lib/stats"
 import { formatBytes, formatUtcTime } from "@/lib/utils"
 
-const headClassName =
-  "font-mono text-[11px] tracking-widest text-muted-foreground uppercase"
+// text-muted-foreground repeats type-micro's color so cn drops TableHead's
+// text-foreground, which would otherwise win in the stylesheet.
+const headClassName = "type-micro text-muted-foreground"
 
 const cellClassName = "py-3 text-right font-mono tabular-nums"
 
@@ -124,9 +125,7 @@ export function ByRegion() {
           {view.status === "ok" && rows.length > 0 && (
             <TableFooter className="bg-transparent text-muted-foreground">
               <TableRow className="hover:bg-transparent">
-                <TableCell className={`${headClassName} py-3`}>
-                  network
-                </TableCell>
+                <TableCell className="py-3 type-micro">network</TableCell>
                 <TableCell className={cellClassName}>
                   {view.network.nodes}
                 </TableCell>
@@ -141,7 +140,7 @@ export function ByRegion() {
           )}
         </Table>
       </DragScroll>
-      <div className="flex flex-col gap-2 text-base leading-relaxed text-muted-foreground">
+      <div className="flex flex-col gap-2 type-prose">
         <p>
           cache hit is the share of bytes served that a region&apos;s nodes
           didn&apos;t pay a peer to pull, from{" "}

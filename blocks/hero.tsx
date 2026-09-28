@@ -48,10 +48,8 @@ export function Hero() {
   const live = state.status === "on"
   return (
     <section className="pt-6">
-      <p className="font-mono text-[11px] tracking-widest text-muted-foreground uppercase">
-        {state.meta}
-      </p>
-      <h1 className="mt-6 text-5xl leading-[1.05] font-medium tracking-tight text-balance lowercase sm:text-6xl md:text-7xl">
+      <p className="type-micro">{state.meta}</p>
+      <h1 className="mt-6 type-h1 text-balance lowercase">
         {headlines[state.status]}
         <span
           aria-hidden="true"
@@ -62,7 +60,7 @@ export function Hero() {
         />
         <span className="sr-only">.</span>
       </h1>
-      <p className="mt-6 max-w-[60ch] text-base leading-relaxed text-muted-foreground">
+      <p className="mt-6 max-w-[60ch] type-prose">
         you don&apos;t have to trust us. every figure below is read from
         contract logs on arbitrum sepolia, nothing annualized or projected, and
         every settlement links to its transaction.
