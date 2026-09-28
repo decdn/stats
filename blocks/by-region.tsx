@@ -18,7 +18,7 @@ import {
   type RegionsView,
 } from "@/lib/regions"
 import { useStats } from "@/lib/stats"
-import { formatBytes, formatUtcTime } from "@/lib/utils"
+import { cn, enterClass, formatBytes, formatUtcTime } from "@/lib/utils"
 
 // text-muted-foreground repeats type-micro's color so cn drops TableHead's
 // text-foreground, which would otherwise win in the stylesheet.
@@ -89,7 +89,7 @@ export function ByRegion() {
               </TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <TableBody className={enterClass(view.status === "loading")}>
             {rows.length === 0 && (
               <TableRow>
                 <TableCell
@@ -123,7 +123,12 @@ export function ByRegion() {
             ))}
           </TableBody>
           {view.status === "ok" && rows.length > 0 && (
-            <TableFooter className="bg-transparent text-muted-foreground">
+            <TableFooter
+              className={cn(
+                "bg-transparent text-muted-foreground",
+                enterClass(false)
+              )}
+            >
               <TableRow className="hover:bg-transparent">
                 <TableCell className="py-3 type-micro">network</TableCell>
                 <TableCell className={cellClassName}>

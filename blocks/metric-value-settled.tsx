@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/card"
 import { metricView, valueSettledMetric, type MetricView } from "@/lib/metrics"
 import { useStats } from "@/lib/stats"
-import { cn, formatUtcTime } from "@/lib/utils"
+import { cn, enterClass, formatUtcTime } from "@/lib/utils"
 
 // No default: a status added to MetricView fails to compile here instead of
 // borrowing another status's label.
@@ -39,7 +39,7 @@ export function MetricValueSettled() {
       <CardHeader>
         <CardTitle className="font-medium">value settled</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className={enterClass(view.status === "loading")}>
         <div className="flex items-baseline gap-1.5">
           <span className="type-figure">{metric?.value ?? "—"}</span>
           {metric?.unit && <span className="type-unit">{metric.unit}</span>}
@@ -55,6 +55,12 @@ export function MetricValueSettled() {
               {metric.delta.text}
             </span>{" "}
             <span className="text-muted-foreground">in the last 24h</span>
+          </p>
+        )}
+        {view.status === "loading" && (
+          // Holds the delta's line so the card doesn't grow when stats land.
+          <p aria-hidden="true" className="invisible text-sm">
+            &nbsp;
           </p>
         )}
         {staleSince !== null && (

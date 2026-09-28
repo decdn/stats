@@ -1,7 +1,7 @@
 "use client"
 
 import { useStats, type StatsResult } from "@/lib/stats"
-import { cn, formatUtcTime } from "@/lib/utils"
+import { cn, enterClass, formatUtcTime } from "@/lib/utils"
 
 // No settlement within this long of the worker's last write reads as quiet:
 // a network that hasn't settled in a day isn't "on" in any sense a reader
@@ -44,12 +44,14 @@ function neutral(meta: string): HeroState {
 }
 
 export function Hero() {
-  const state = heroState(useStats())
+  const result = useStats()
+  const state = heroState(result)
   const live = state.status === "on"
+  const enter = enterClass(result.status === "loading")
   return (
     <section className="pt-6">
-      <p className="type-micro">{state.meta}</p>
-      <h1 className="mt-6 type-h1 text-balance lowercase">
+      <p className={cn("type-micro", enter)}>{state.meta}</p>
+      <h1 className={cn("mt-6 type-h1 text-balance lowercase", enter)}>
         {headlines[state.status]}
         <span
           aria-hidden="true"
