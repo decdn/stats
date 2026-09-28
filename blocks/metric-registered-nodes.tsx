@@ -74,7 +74,7 @@ export function MetricRegisteredNodes() {
         )}
       </CardContent>
       <CardFooter>
-        <p className="font-mono text-micro tracking-normal">
+        <p className="type-footnote">
           <span className="text-muted-foreground">events</span>{" "}
           <span className="text-foreground">
             CapacityBond.NodeRegistered · NodeDeregistered · NodeAutoEjected

@@ -12,8 +12,8 @@
      in sync with it so the two sites' content lines up at every width. */
   --container-frame: 1280px;
   --spacing-frame-gutter: clamp(1.5rem, 4vw, 4rem);
-  /* The metadata size: text-micro, with its wide tracking built in. The
-     type-* text roles further down build on it and the default scale. */
+  /* The metadata size: text-micro, with its wide tracking built in. Used by
+     type-micro and type-footnote further down, and the footer and header nav. */
   --text-micro: 11px;
   --text-micro--letter-spacing: 0.2em;
   --color-sidebar-ring: var(--sidebar-ring);
@@ -142,10 +142,10 @@
 }
 
 /* Text roles: the page's recurring type, one class each. They're named type-*
-   rather than text-* because cn reads an unknown text-* class as a color and
-   would drop it next to text-muted-foreground. */
+   rather than text-* because cn reads an unknown text-* class as a color, so of
+   it and a real text color only the later one survives. */
 
-/* Uppercase mono metadata: the hero meta line, table heads, the theme switch. */
+/* Uppercase mono metadata. */
 @utility type-micro {
   @apply font-mono text-micro text-muted-foreground uppercase;
 }
@@ -170,6 +170,11 @@
 
 @utility type-unit {
   @apply text-xl text-muted-foreground;
+}
+
+/* A metric card's footer: the same mono size, untracked and in its own case. */
+@utility type-footnote {
+  @apply font-mono text-micro tracking-normal;
 }
 
 /* The theme change crossfades (see `switchTheme` in components/theme-provider). */

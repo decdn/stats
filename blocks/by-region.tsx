@@ -125,9 +125,7 @@ export function ByRegion() {
           {view.status === "ok" && rows.length > 0 && (
             <TableFooter className="bg-transparent text-muted-foreground">
               <TableRow className="hover:bg-transparent">
-                <TableCell className={`${headClassName} py-3`}>
-                  network
-                </TableCell>
+                <TableCell className="py-3 type-micro">network</TableCell>
                 <TableCell className={cellClassName}>
                   {view.network.nodes}
                 </TableCell>

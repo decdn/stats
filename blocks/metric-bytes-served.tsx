@@ -71,7 +71,7 @@ export function MetricBytesServed() {
         )}
       </CardContent>
       <CardFooter>
-        <p className="font-mono text-micro tracking-normal">
+        <p className="type-footnote">
           <span className="text-muted-foreground">event</span>{" "}
           <span className="text-foreground">
             FeeRouter.Settled · field bytesDelivered
