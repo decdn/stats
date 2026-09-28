@@ -5,9 +5,9 @@ import { Line, LineChart, XAxis, YAxis } from "recharts"
 import {
   ChartContainer,
   ChartTooltip,
-  ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart"
+import { MetricTooltipContent } from "@/blocks/charts/metric-tooltip"
 import type { MetricPoint } from "@/lib/metrics"
 
 const chartConfig = {
@@ -39,7 +39,9 @@ export function RegisteredNodesChart({ series }: { series: MetricPoint[] }) {
         <YAxis hide domain={yDomain} />
         <ChartTooltip
           cursor={false}
-          content={<ChartTooltipContent indicator="line" />}
+          content={
+            <MetricTooltipContent seriesLabel={chartConfig.value.label} />
+          }
         />
         {/* A count moves in steps, and the Y domain puts a flat count near
             the top, so a filled area would make a quiet day the heaviest

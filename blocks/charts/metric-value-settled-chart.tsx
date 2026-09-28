@@ -5,9 +5,9 @@ import { Area, AreaChart, XAxis, YAxis } from "recharts"
 import {
   ChartContainer,
   ChartTooltip,
-  ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart"
+import { MetricTooltipContent } from "@/blocks/charts/metric-tooltip"
 import type { MetricPoint } from "@/lib/metrics"
 
 const chartConfig = {
@@ -17,7 +17,13 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export function ValueSettledChart({ series }: { series: MetricPoint[] }) {
+export function ValueSettledChart({
+  series,
+  unit,
+}: {
+  series: MetricPoint[]
+  unit?: string
+}) {
   const lastIndex = series.length - 1
   const values = series.map((point) => point.value)
   const minValue = Math.min(...values)
@@ -39,7 +45,13 @@ export function ValueSettledChart({ series }: { series: MetricPoint[] }) {
         <YAxis hide domain={yDomain} />
         <ChartTooltip
           cursor={false}
-          content={<ChartTooltipContent indicator="line" />}
+          content={
+            <MetricTooltipContent
+              seriesLabel={chartConfig.value.label}
+              unit={unit}
+              fractionDigits={2}
+            />
+          }
         />
         <defs>
           <linearGradient id="fillValueSettled" x1="0" y1="0" x2="0" y2="1">
