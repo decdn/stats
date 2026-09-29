@@ -56,7 +56,7 @@ export function Hero() {
         <span
           aria-hidden="true"
           className={cn(
-            "ml-2 inline-block size-2.5 align-baseline md:size-3.5",
+            "ml-2 inline-block size-2 align-baseline md:size-3",
             result.status === "loading"
               ? "animate-cursor bg-foreground"
               : live
