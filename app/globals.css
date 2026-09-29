@@ -160,7 +160,7 @@
 }
 
 @utility type-h2 {
-  @apply text-2xl font-medium tracking-tight sm:text-3xl;
+  @apply text-2xl font-semibold tracking-tight sm:text-3xl;
 }
 
 /* A metric card's headline figure, and the unit beside it. */
