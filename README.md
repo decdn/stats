@@ -13,6 +13,8 @@ A single-page status dashboard for the DeCDN network — value settled, bytes se
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-FE5196?logo=conventionalcommits&logoColor=white)](https://www.conventionalcommits.org)
 ![Code style: Prettier](https://img.shields.io/badge/code%20style-Prettier-F7B93E?logo=prettier&logoColor=black)
 
+Built with Next.js (App Router), React 19, Tailwind CSS v4, shadcn/ui, and recharts.
+
 > Every section is live: the Worker's cron (code in [`worker/`](worker/)) indexes `FeeRouter`, `CapacityBond` and `PaymentPool` logs and writes `stats-<CHAIN_ID>.json` to R2. The bucket is public at `https://data.decdn.org`, and the page, a static export, fetches the file in the browser and refreshes it every minute while the tab is visible.
 
 ## Getting started
