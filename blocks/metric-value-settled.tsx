@@ -55,7 +55,11 @@ export function MetricValueSettled() {
       </CardHeader>
       <CardContent className={enterClass(view.status === "loading")}>
         <div className="flex items-baseline gap-1.5">
-          <span className="type-figure">{metric?.value ?? "—"}</span>
+          {/* Without a figure the dash is decoration: the empty label below
+              says why. */}
+          <span className="type-figure" aria-hidden={metric ? undefined : true}>
+            {metric?.value ?? "—"}
+          </span>
           {metric?.unit && <span className="type-unit">{metric.unit}</span>}
         </div>
         {metric?.delta && staleSince === null && (
