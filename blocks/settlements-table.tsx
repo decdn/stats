@@ -31,10 +31,13 @@ type Row = {
   date: string
   time: string
   operator: string
+  // The full hex the cell truncates, shown on hover.
+  operatorFull: string
   operatorHref: string
   bytes: string
   value: string
   tx: string
+  txFull: string
   txHref: string
 }
 
@@ -74,10 +77,12 @@ function settlementsData(result: StatsResult): TableData {
         date,
         time,
         operator: truncateHex(row.operator),
+        operatorFull: row.operator,
         operatorHref: `${explorerUrl}/address/${row.operator}`,
         bytes: formatBytes(Number(row.bytesDelivered)),
         value: formatUsdc(row.amount),
         tx: truncateHex(row.txHash, 8),
+        txFull: row.txHash,
         txHref: `${explorerUrl}/tx/${row.txHash}`,
       }
     }),
@@ -91,6 +96,11 @@ function settlementsData(result: StatsResult): TableData {
 const headClassName = "type-micro text-muted-foreground"
 
 const linkClassName = "underline-offset-4 hover:underline"
+
+// A link's name stays its visible text, so voice control can click what it
+// sees (WCAG 2.5.3); the full hex rides along as its title, and screen
+// readers hear that it opens a new tab.
+const newTab = <span className="sr-only">, opens in a new tab</span>
 
 // Rows arrive newest first, so each date's rows are contiguous.
 function groupByDate(rows: Row[]) {
@@ -158,11 +168,13 @@ export function SettlementsTable() {
                   <TableCell>
                     <a
                       href={settlement.operatorHref}
+                      title={settlement.operatorFull}
                       target="_blank"
                       rel="noreferrer"
                       className={linkClassName}
                     >
                       {settlement.operator}
+                      {newTab}
                     </a>
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
@@ -174,12 +186,14 @@ export function SettlementsTable() {
                   <TableCell className="text-right">
                     <a
                       href={settlement.txHref}
+                      title={settlement.txFull}
                       target="_blank"
                       rel="noreferrer"
                       className={linkClassName}
                     >
                       {settlement.tx}
                       <span aria-hidden="true"> ↗</span>
+                      {newTab}
                     </a>
                   </TableCell>
                 </TableRow>

@@ -43,6 +43,23 @@ function neutral(meta: string): HeroState {
   return { status: "neutral", meta }
 }
 
+// What the status region announces. It changes only when the load state, the
+// backfill (indexing, then caught up) or the headline does, so the 60s
+// refresh stays silent. No default: a status
+// added to StatsResult fails to compile here.
+function announcement(result: StatsResult, state: HeroState): string {
+  switch (result.status) {
+    case "loading":
+      return ""
+    case "error":
+      return "stats unavailable"
+    case "unindexed":
+      return "waiting for the first index"
+    case "ok":
+      return result.stats.caughtUp ? headlines[state.status] : "indexing"
+  }
+}
+
 export function Hero() {
   const result = useStats()
   const state = heroState(result)
@@ -66,6 +83,10 @@ export function Hero() {
         />
         <span className="sr-only">.</span>
       </h1>
+      {/* Rendered empty in the static HTML, so the first change announces. */}
+      <p role="status" className="sr-only">
+        {announcement(result, state)}
+      </p>
       <p className="mt-6 max-w-[60ch] type-prose">
         you don&apos;t have to trust us. every figure below is read from
         contract logs on arbitrum sepolia, nothing annualized or projected, and
