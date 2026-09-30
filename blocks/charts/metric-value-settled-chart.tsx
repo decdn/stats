@@ -39,9 +39,11 @@ export function ValueSettledChart({
       <AreaChart
         accessibilityLayer
         // A named image rather than recharts' default unnamed application; it
-        // stays focusable, so the arrow keys still step the tooltip.
+        // stays focusable, so the arrow keys still step the tooltip for sighted
+        // keyboard users. aria-label, not title: an svg <title> shows as a
+        // native hover tooltip over recharts' own.
         role="img"
-        title="value settled, all-time total at the end of each of the last 24 hours"
+        aria-label="value settled, all-time total at the end of each of the last 24 hours"
         data={series}
         margin={{ left: 4, right: 6, top: 6, bottom: 0 }}
       >
