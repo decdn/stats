@@ -26,7 +26,7 @@ pnpm install
 pnpm dev
 ```
 
-Then open http://localhost:3000. The page needs no `.env`: it fetches the live production file, `https://data.decdn.org/stats-421614.json`, from the browser. Set `NEXT_PUBLIC_STATS_URL` in `.env` to read another URL, which must send CORS headers. Until the file loads, every section says "loading"; if the first fetch fails they say "stats unavailable". After that a failed refresh keeps the last stats on screen, marked "as of …" once they are over 30 minutes old.
+Then open http://localhost:3000. The page needs no `.env`: it fetches the live production file, `https://data.decdn.org/stats-421614.json`, from the browser. Set `NEXT_PUBLIC_STATS_URL` in `.env` to read another URL, which must send CORS headers. Until the file loads, every section says "loading", trailed by a blinking block cursor; the copy holds back 800ms before fading in, so a fast fetch never flashes it, and the data fades in when it replaces it (under `prefers-reduced-motion` both appear at once). If the first fetch fails the sections say "stats unavailable". After that a failed refresh keeps the last stats on screen, marked "as of …" once the worker's last write is over 15 minutes older than the last fetch attempt.
 
 ### Running the indexer locally
 
@@ -36,7 +36,7 @@ pnpm index             # one cron tick into a locally emulated R2 bucket
 npx wrangler r2 object get decdn-stats/stats-421614.json --local --pipe
 ```
 
-Each tick indexes at most `LOG_CHUNK_BLOCKS × MAX_CHUNKS_PER_RUN` blocks (see [`wrangler.jsonc`](wrangler.jsonc)) past `lastBlock`, so the first backfill takes a few runs of `pnpm index`; set `LOG_CHUNK_BLOCKS=1000000` in `.env` if your RPC allows wide `eth_getLogs` ranges. `pnpm index` takes its bindings and vars from `wrangler.jsonc` plus `.env`, and the emulated bucket persists in `.wrangler/state`; with the `R2_*` credentials set it writes the real bucket instead. To render a local file, serve it with CORS headers and point `NEXT_PUBLIC_STATS_URL` at it. Until the index has caught up with the chain the metric cards read "catching up · block N" and the table footer "re-indexing". The registered-node count and its history are folded from `CapacityBond` registration events, so the sparkline and 24h change are complete as soon as the index catches up.
+Each tick indexes at most `LOG_CHUNK_BLOCKS × MAX_CHUNKS_PER_RUN` blocks (see [`wrangler.jsonc`](wrangler.jsonc)) past `lastBlock`, so the first backfill takes a few runs of `pnpm index`; set `LOG_CHUNK_BLOCKS=1000000` in `.env` if your RPC allows wide `eth_getLogs` ranges. `pnpm index` takes its bindings and vars from `wrangler.jsonc` plus `.env`, and the emulated bucket persists in `.wrangler/state`; with the `R2_*` credentials set it writes the real bucket instead. To render a local file, serve it with CORS headers and point `NEXT_PUBLIC_STATS_URL` at it. Until the index has caught up with the chain the metric cards read "catching up · block N" and the settlements table footer "indexing · block N". The registered-node count and its history are folded from `CapacityBond` registration events, so the sparkline and 24h change are complete as soon as the index catches up.
 
 ## Deploying to Cloudflare
 
@@ -70,13 +70,13 @@ There is no test framework in this project. Verify changes with `pnpm typecheck 
 
 ```
 app/            layout, globals.css, and page.tsx — the only composition point
-blocks/         page sections (hero, metric-*, by-region, settlements); charts/ holds the metric cards' client charts
-globals/        chrome reused across sections (Header, Footer, SectionHeading, Wordmark, DragScroll)
+blocks/         page sections (hero, metric-*, by-region, settlements); charts/ holds the metric cards' client charts and their shared tooltip
+globals/        chrome reused across sections (Header, Footer, SectionHeading, Wordmark, DragScroll, Cursor)
 components/ui/  unmodified shadcn/ui primitives
 lib/stats.tsx   StatsProvider + useStats() — fetches the public stats file in the browser
-worker/src/     the Worker entry and the indexer (cron → R2)
 lib/metrics.ts  stats file → metric card view models (headline, 24h change, hourly series)
 lib/regions.ts  stats file → by-region rows (nodes, bytes, cache hit)
+worker/src/     the Worker entry and the indexer (cron → R2)
 ```
 
 Two rules explain most of the structure:
@@ -84,12 +84,12 @@ Two rules explain most of the structure:
 - **Figures and copy are separated.** `lib/metrics.ts` and `lib/regions.ts` hold only values and statuses (`Metric`, `MetricView`, `RegionRow`, `RegionsView`); even empty-state labels live in the blocks. Headlines, labels, and prose are hardcoded in the block that renders them — so changing what the page _says_ means editing that block, not the data file.
 - **Blocks take no props and own no layout.** Each section's entry component takes no props and reads its own figures with `useStats()`; only the `charts/metric-*-chart.tsx` halves receive `series` from their block. `app/page.tsx` assembles them inside `StatsProvider` and owns all page-level layout (the metrics grid and the content rail — `px-frame-gutter` around `max-w-frame`, matching decdn.org, which the header and footer repeat).
 
-The three metric cards are deliberately separate files rather than one parameterized component: each owns its own `ChartConfig`, series shape (an area with its gradient `id`, or a step line for registered nodes), and Y-domain math. Each is a client component (`metric-*.tsx`, `useStats()`) paired with its recharts chart (`charts/metric-*-chart.tsx`). Every block that shows live data is a client component; the static HTML is their "loading" state.
+The three metric cards are deliberately separate files rather than one parameterized component: each owns its own `ChartConfig`, series shape (an area with its gradient `id`, or a step line for registered nodes), and Y-domain math. Each is a client component (`metric-*.tsx`, `useStats()`) paired with its recharts chart (`charts/metric-*-chart.tsx`). The charts do share one hover card, `MetricTooltipContent` in `charts/metric-tooltip.tsx`, which shows the series name and value in the headline's unit and precision. Every block that shows live data is a client component; the static HTML is their "loading" state.
 
 ## Conventions
 
 - Charts are recharts inside shadcn's `ChartContainer`; series colors come from `ChartConfig` and are read in JSX as `var(--color-<dataKey>)`.
-- Design tokens are CSS variables in `app/globals.css` (`:root` / `.dark`), mapped into Tailwind v4 via `@theme inline`. There is no `tailwind.config`. `--accent-green` is the one non-neutral accent — use tokens (`text-muted-foreground`, `bg-accent-green`) rather than raw colors.
+- Design tokens are CSS variables in `app/globals.css` (`:root` / `.dark`), mapped into Tailwind v4 via `@theme inline`. There is no `tailwind.config`. `--accent-green` is the one non-neutral accent, reserved for liveness (the hero's square), positive deltas, the header nav's active underline, the metric charts' series and the wordmark's underscore — use tokens (`text-muted-foreground`, `bg-accent-green`) rather than raw colors.
 - Visual voice: lowercase copy, `type-micro` labels (mono, uppercase, wide tracking) for metadata, `tabular-nums` for figures. The recurring text roles are `type-*` utilities in `app/globals.css`.
 - Import paths use the `@/*` alias rooted at the project directory.
 - Prettier: no semicolons, double quotes, 2-space indent, 80 columns, with `prettier-plugin-tailwindcss` sorting classes.
