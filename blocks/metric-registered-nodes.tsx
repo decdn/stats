@@ -1,6 +1,7 @@
 "use client"
 
-import { RegisteredNodesChart } from "@/blocks/charts/metric-registered-nodes-chart"
+import dynamic from "next/dynamic"
+
 import {
   Card,
   CardContent,
@@ -16,6 +17,16 @@ import {
 import { Cursor } from "@/globals/Cursor/cursor"
 import { useStats } from "@/lib/stats"
 import { cn, enterClass, formatUtcTime } from "@/lib/utils"
+
+// recharts is the page's heaviest dependency and draws nothing until stats
+// arrive, so it stays out of the hydration bundle: the import starts when this
+// module loads, alongside the stats fetch, and the h-24 box holds the chart's
+// place until it lands.
+const chartModule = import("@/blocks/charts/metric-registered-nodes-chart")
+const RegisteredNodesChart = dynamic(
+  () => chartModule.then((chart) => chart.RegisteredNodesChart),
+  { ssr: false, loading: () => <div className="h-24" /> }
+)
 
 // No default: a status added to MetricView fails to compile here instead of
 // borrowing another status's label.
