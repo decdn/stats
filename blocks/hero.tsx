@@ -43,8 +43,9 @@ function neutral(meta: string): HeroState {
   return { status: "neutral", meta }
 }
 
-// What the status region announces. It changes only when the load state or
-// the headline does, so the 60s refresh stays silent. No default: a status
+// What the status region announces. It changes only when the load state, the
+// backfill (indexing, then caught up) or the headline does, so the 60s
+// refresh stays silent. No default: a status
 // added to StatsResult fails to compile here.
 function announcement(result: StatsResult, state: HeroState): string {
   switch (result.status) {
@@ -55,9 +56,7 @@ function announcement(result: StatsResult, state: HeroState): string {
     case "unindexed":
       return "waiting for the first index"
     case "ok":
-      return result.stats.caughtUp
-        ? `stats loaded: ${headlines[state.status]}`
-        : "indexing"
+      return result.stats.caughtUp ? headlines[state.status] : "indexing"
   }
 }
 
