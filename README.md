@@ -93,7 +93,7 @@ The three metric cards are deliberately separate files rather than one parameter
 - Visual voice: lowercase copy, `tabular-nums` for figures, and the `type-*` text roles in `app/globals.css` (`type-micro` for metadata labels).
 - Import paths use the `@/*` alias rooted at the project directory.
 - Prettier: no semicolons, double quotes, 2-space indent, 80 columns, with `prettier-plugin-tailwindcss` sorting classes.
-- Commits follow Conventional Commits, checked by the local `commit-msg` hook. The hook never sees a squash merge's title, so keep PR titles conventional too.
+- Commits follow Conventional Commits, checked by the local `commit-msg` hook (`@commitlint/config-conventional`): a type from `feat`, `fix`, `refactor`, `chore`, `docs`, `style`, `perf`, `test`, `build`, `ci`, `revert`; a subject not in sentence, start, pascal or upper case; header and body lines of at most 100 characters. The hook never sees a squash merge's title, so keep PR titles conventional too.
 
 ## Adding UI components
 
