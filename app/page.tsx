@@ -13,12 +13,19 @@ import { StatsProvider } from "@/lib/stats"
 export default function Page() {
   return (
     <StatsProvider>
-      <div className="flex min-h-svh flex-col bg-background">
+      {/* The header's metrics link targets this wrapper rather than the cards'
+          section, so "#metrics" lands on the page top: the hero heads them. */}
+      <div id="metrics" className="flex min-h-svh flex-col bg-background">
         <SiteHeader />
         <main className="flex flex-1 flex-col px-frame-gutter">
           <div className="mx-auto flex w-full max-w-frame flex-1 flex-col gap-16">
             <Hero />
             <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              {/* Visually the hero heads the cards. This h2 gives their titles
+                  (h3s via role="heading": CardTitle is a div, and components/ui
+                  stays unmodified) a parent in the outline, level with the
+                  by-region and settlements h2s. */}
+              <h2 className="sr-only">metrics</h2>
               <MetricValueSettled />
               <MetricBytesServed />
               <MetricRegisteredNodes />

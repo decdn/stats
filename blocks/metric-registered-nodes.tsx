@@ -1,6 +1,8 @@
 "use client"
 
-import { RegisteredNodesChart } from "@/blocks/charts/metric-registered-nodes-chart"
+import dynamic from "next/dynamic"
+
+import { ChartUnavailable } from "@/blocks/charts/chart-unavailable"
 import {
   Card,
   CardContent,
@@ -16,6 +18,26 @@ import {
 import { Cursor } from "@/globals/Cursor/cursor"
 import { useStats } from "@/lib/stats"
 import { cn, enterClass, formatUtcTime } from "@/lib/utils"
+
+// recharts is the page's heaviest dependency and draws nothing until stats
+// arrive, so it stays out of the hydration bundle. The import is hoisted out
+// of dynamic(), whose loader would only run on the chart's first render, after
+// the stats land: this way the chunk downloads while they're still being
+// fetched, and the h-24 box holds the chart's place until it lands. A chunk
+// that fails to load leaves a labeled gap rather than an error that would
+// take the whole page down.
+const chartModule =
+  import("@/blocks/charts/metric-registered-nodes-chart").then(
+    (chart) => chart.RegisteredNodesChart,
+    (error: unknown) => {
+      console.error(error)
+      return ChartUnavailable
+    }
+  )
+const RegisteredNodesChart = dynamic(() => chartModule, {
+  ssr: false,
+  loading: () => <div className="h-24" />,
+})
 
 // No default: a status added to MetricView fails to compile here instead of
 // borrowing another status's label.
@@ -42,11 +64,17 @@ export function MetricRegisteredNodes() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-medium">registered nodes</CardTitle>
+        <CardTitle role="heading" aria-level={3} className="font-medium">
+          registered nodes
+        </CardTitle>
       </CardHeader>
       <CardContent className={enterClass(view.status === "loading")}>
         <div className="flex items-baseline gap-1.5">
-          <span className="type-figure">{metric?.value ?? "—"}</span>
+          {/* Without a figure the dash is decoration: the empty label below
+              says why. */}
+          <span className="type-figure" aria-hidden={metric ? undefined : true}>
+            {metric?.value ?? "—"}
+          </span>
         </div>
         {metric?.delta && staleSince === null && (
           <p className="text-sm">
