@@ -13,8 +13,6 @@ A single-page status dashboard for the DeCDN network — value settled, bytes se
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-FE5196?logo=conventionalcommits&logoColor=white)](https://www.conventionalcommits.org)
 ![Code style: Prettier](https://img.shields.io/badge/code%20style-Prettier-F7B93E?logo=prettier&logoColor=black)
 
-Built with Next.js (App Router), React 19, Tailwind CSS v4, shadcn/ui, and recharts.
-
 > Every section is live: the Worker's cron (code in [`worker/`](worker/)) indexes `FeeRouter`, `CapacityBond` and `PaymentPool` logs and writes `stats-<CHAIN_ID>.json` to R2. The bucket is public at `https://data.decdn.org`, and the page, a static export, fetches the file in the browser and refreshes it every minute while the tab is visible.
 
 ## Getting started
@@ -26,7 +24,7 @@ pnpm install
 pnpm dev
 ```
 
-Then open http://localhost:3000. The page needs no `.env`: it fetches the live production file, `https://data.decdn.org/stats-421614.json`, from the browser. Set `NEXT_PUBLIC_STATS_URL` in `.env` to read another URL, which must send CORS headers. Until the file loads, every section says "loading", trailed by a blinking block cursor; the copy holds back 800ms before fading in, so a fast fetch never flashes it, and the data fades in when it replaces it (under `prefers-reduced-motion` both appear at once). If the first fetch fails the sections say "stats unavailable". After that a failed refresh keeps the last stats on screen, marked "as of …" once the worker's last write is over 15 minutes older than the last fetch attempt.
+Then open http://localhost:3000. The page needs no `.env`: it fetches the live production file, `https://data.decdn.org/stats-421614.json`, from the browser. Set `NEXT_PUBLIC_STATS_URL` in `.env` to read another URL, which must send CORS headers. Until the file loads, every section says "loading"; if the first fetch fails they say "stats unavailable". After that a failed refresh keeps the last stats on screen, marked "as of …" once the worker's last write is over 15 minutes older than the last fetch attempt.
 
 ### Running the indexer locally
 
@@ -36,13 +34,13 @@ pnpm index             # one cron tick into a locally emulated R2 bucket
 npx wrangler r2 object get decdn-stats/stats-421614.json --local --pipe
 ```
 
-Each tick indexes at most `LOG_CHUNK_BLOCKS × MAX_CHUNKS_PER_RUN` blocks (see [`wrangler.jsonc`](wrangler.jsonc)) past `lastBlock`, so the first backfill takes a few runs of `pnpm index`; set `LOG_CHUNK_BLOCKS=1000000` in `.env` if your RPC allows wide `eth_getLogs` ranges. `pnpm index` takes its bindings and vars from `wrangler.jsonc` plus `.env`, and the emulated bucket persists in `.wrangler/state`; with the `R2_*` credentials set it writes the real bucket instead. To render a local file, serve it with CORS headers and point `NEXT_PUBLIC_STATS_URL` at it. Until the index has caught up with the chain the metric cards read "catching up · block N" and the settlements table footer "indexing · block N". The registered-node count and its history are folded from `CapacityBond` registration events, so the sparkline and 24h change are complete as soon as the index catches up.
+Each tick indexes at most `LOG_CHUNK_BLOCKS × MAX_CHUNKS_PER_RUN` blocks (see [`wrangler.jsonc`](wrangler.jsonc)) past `lastBlock`, so the first backfill takes a few runs of `pnpm index`; set `LOG_CHUNK_BLOCKS=1000000` in `.env` if your RPC allows wide `eth_getLogs` ranges. `pnpm index` takes its bindings and vars from `wrangler.jsonc` plus `.env`, and the emulated bucket persists in `.wrangler/state`; with the `R2_*` credentials set it writes the real bucket instead. To render a local file, serve it with CORS headers and point `NEXT_PUBLIC_STATS_URL` at it. Until the index has caught up with the chain the metric cards read "catching up · block N" and the settlements table footer "indexing · block N".
 
 ## Deploying to Cloudflare
 
 The repo is one Worker, `stats`, configured in [`wrangler.jsonc`](wrangler.jsonc). It serves the static export in `out/` as assets (`not_found_handling: "404-page"`), and its entry, [`worker/src/index.ts`](worker/src/index.ts), adds the `scheduled` handler: every 5 minutes the cron indexes the chain into the `decdn-stats` R2 bucket (binding `STATS`). The bucket's public domain, `data.decdn.org`, serves the file to the page. There is no server rendering, so the Worker's own `fetch` only hands asset misses back to the assets binding.
 
-On Workers Builds it's one project with the repo root as root directory and the defaults: build command `pnpm run build`, deploy command `npx wrangler deploy`, non-production branch deploy command `npx wrangler preview`. A Preview inherits no vars or bindings except the assets and their `ASSETS` binding, and runs no cron; the page needs nothing else, so the `previews` block in [`wrangler.jsonc`](wrangler.jsonc) is empty (`wrangler preview` requires it to exist). A Preview reads the production file like everything else. The Worker name in the dashboard must match `name` in `wrangler.jsonc`, or the build fails. `pnpm build` is `next build` with `output: "export"` (after `cf-typegen`, since it typechecks `worker/` too).
+On Workers Builds it's one project with the repo root as root directory and the defaults: build command `pnpm run build`, deploy command `npx wrangler deploy`, non-production branch deploy command `npx wrangler preview`. A Preview inherits no vars or bindings except the assets and their `ASSETS` binding, and runs no cron; the page needs nothing else, so the `previews` block in [`wrangler.jsonc`](wrangler.jsonc) is empty (`wrangler preview` requires it to exist). A Preview reads the production file like everything else. The Worker name in the dashboard must match `name` in `wrangler.jsonc`, or the build fails.
 
 Before the first deploy: `wrangler r2 bucket create decdn-stats`, `wrangler secret put RPC_URL`, connect the bucket's public custom domain (`data.decdn.org`) in the R2 dashboard, and give it the CORS policy in [`r2-cors.json`](r2-cors.json) — `npx wrangler r2 bucket cors set decdn-stats --file r2-cors.json` — without which the browser can't read the file. `CHAIN_ID` in `wrangler.jsonc` names the file, so the page's URL in [`lib/stats.tsx`](lib/stats.tsx) must change with it. Locally, `pnpm app:preview` builds and runs the Worker in workerd with `--test-scheduled`, so `curl "http://localhost:8787/__scheduled?cron=*/5+*+*+*+*"` fires a cron tick. `pnpm app:deploy` builds and deploys it.
 
@@ -64,7 +62,7 @@ When the contracts are redeployed, update `FEE_ROUTER`, `CAPACITY_BOND`, `PAYMEN
 
 There is no test framework in this project. Verify changes with `pnpm typecheck && pnpm lint` and by looking at the running dev server.
 
-`pnpm install` also installs husky git hooks: `pre-commit` runs lint-staged (ESLint `--fix` + Prettier on staged JS/TS, Prettier on staged JSON/JSONC/Markdown/CSS/YAML) and `commit-msg` checks the message against Conventional Commits with commitlint. They're local only: `git commit --no-verify` or `HUSKY=0` skips them.
+`pnpm install` also installs husky git hooks that run lint-staged (ESLint and Prettier on staged files) and commitlint; `git commit --no-verify` or `HUSKY=0` skips them.
 
 ## Project layout
 
@@ -84,16 +82,16 @@ Two rules explain most of the structure:
 - **Figures and copy are separated.** `lib/metrics.ts` and `lib/regions.ts` hold only values and statuses (`Metric`, `MetricView`, `RegionRow`, `RegionsView`); even empty-state labels live in the blocks. Headlines, labels, and prose are hardcoded in the block that renders them — so changing what the page _says_ means editing that block, not the data file.
 - **Blocks take no props and own no layout.** Each section's entry component takes no props and reads its own figures with `useStats()`; only the `charts/metric-*-chart.tsx` halves receive `series` from their block. `app/page.tsx` assembles them inside `StatsProvider` and owns all page-level layout (the metrics grid and the content rail — `px-frame-gutter` around `max-w-frame`, matching decdn.org, which the header and footer repeat).
 
-The three metric cards are deliberately separate files rather than one parameterized component: each owns its own `ChartConfig`, series shape (an area with its gradient `id`, or a step line for registered nodes), and Y-domain math. Each is a client component (`metric-*.tsx`, `useStats()`) paired with its recharts chart (`charts/metric-*-chart.tsx`). The charts do share one hover card, `MetricTooltipContent` in `charts/metric-tooltip.tsx`, which shows the series name and value in the headline's unit and precision. Every block that shows live data is a client component; the static HTML is their "loading" state.
+The three metric cards are deliberately separate files rather than one parameterized component: each `metric-*.tsx` is paired with its own `charts/metric-*-chart.tsx`, which owns its `ChartConfig`, series shape and Y-domain math.
 
 ## Conventions
 
 - Charts are recharts inside shadcn's `ChartContainer`; series colors come from `ChartConfig` and are read in JSX as `var(--color-<dataKey>)`.
-- Design tokens are CSS variables in `app/globals.css` (`:root` / `.dark`), mapped into Tailwind v4 via `@theme inline`. There is no `tailwind.config`. `--accent-green` is the one non-neutral accent, reserved for liveness (the hero's square), positive deltas, the header nav's active underline, the metric charts' series and the wordmark's underscore — use tokens (`text-muted-foreground`, `bg-accent-green`) rather than raw colors.
-- Visual voice: lowercase copy, `type-micro` labels (mono, uppercase, wide tracking) for metadata, `tabular-nums` for figures. The recurring text roles are `type-*` utilities in `app/globals.css`.
+- Design tokens are CSS variables in `app/globals.css` (`:root` / `.dark`), mapped into Tailwind v4 via `@theme inline`. There is no `tailwind.config`. `--accent-green` is the one non-neutral accent — use tokens (`text-muted-foreground`, `bg-accent-green`) rather than raw colors.
+- Visual voice: lowercase copy, `tabular-nums` for figures, and the `type-*` text roles in `app/globals.css` (`type-micro` for metadata labels).
 - Import paths use the `@/*` alias rooted at the project directory.
 - Prettier: no semicolons, double quotes, 2-space indent, 80 columns, with `prettier-plugin-tailwindcss` sorting classes.
-- Commits follow Conventional Commits, checked by the `commit-msg` hook (`@commitlint/config-conventional`): a type from `feat`, `fix`, `refactor`, `chore`, `docs`, `style`, `perf`, `test`, `build`, `ci`, `revert`; a subject not in sentence, start, pascal or upper case; header and body lines of at most 100 characters. The hook is local, so a squash merge's title (the PR title) is never checked.
+- Commits follow Conventional Commits, checked by the local `commit-msg` hook.
 
 ## Adding UI components
 
