@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 
 import type { RegionRow } from "@/lib/regions"
-import { enterClass } from "@/lib/utils"
+import { cn, enterClass } from "@/lib/utils"
 import worldMap from "@/lib/world-map.json"
 
 export type MapPoint = { code: string; nodes: number; bytesServed: bigint }
@@ -47,10 +47,12 @@ export function RegionMap({
   rows,
   label,
   pointLabel,
+  className,
 }: {
   rows: RegionRow[]
   label: string
   pointLabel: (point: MapPoint) => string
+  className?: string
 }) {
   const ref = useRef<SVGSVGElement>(null)
   // Rendered width, measured after mount; circles wait for it.
@@ -76,7 +78,7 @@ export function RegionMap({
       role="img"
       aria-label={label}
       viewBox={worldMap.viewBox.join(" ")}
-      className="h-auto w-full"
+      className={cn("h-auto w-full", className)}
     >
       <path d={worldMap.land} className="fill-muted" />
       {points.length > 0 && (
