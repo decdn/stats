@@ -1,5 +1,6 @@
 "use client"
 
+import { RegionMap, type MapPoint } from "@/blocks/charts/region-map"
 import {
   Table,
   TableBody,
@@ -19,7 +20,13 @@ import {
   type RegionsView,
 } from "@/lib/regions"
 import { useStats } from "@/lib/stats"
-import { cn, enterClass, formatBytes, formatUtcTime } from "@/lib/utils"
+import {
+  cn,
+  countryName,
+  enterClass,
+  formatBytes,
+  formatUtcTime,
+} from "@/lib/utils"
 
 // text-muted-foreground repeats type-micro's color so cn drops TableHead's
 // text-foreground, which would otherwise win in the stylesheet.
@@ -27,15 +34,25 @@ const headClassName = "type-micro text-muted-foreground"
 
 const cellClassName = "py-3 text-right font-mono tabular-nums"
 
-const countryNames = new Intl.DisplayNames(["en"], { type: "region" })
-
-function countryName(code: string) {
+function regionName(code: string) {
   if (code === UNKNOWN_REGION) return "no valid region declared"
-  try {
-    return countryNames.of(code)?.toLowerCase() ?? ""
-  } catch {
-    return ""
-  }
+  return countryName(code)
+}
+
+function nodeCount(nodes: number) {
+  return `${nodes} ${nodes === 1 ? "node" : "nodes"}`
+}
+
+// "DE · germany · 12 nodes · 3.4 GB served", the map's hover title.
+function pointLabel(point: MapPoint) {
+  return [
+    point.code,
+    countryName(point.code),
+    nodeCount(point.nodes),
+    `${formatBytes(Number(point.bytesServed))} served`,
+  ]
+    .filter(Boolean)
+    .join(" · ")
 }
 
 // No default: a status added to RegionsView fails to compile here instead of
@@ -72,8 +89,14 @@ export function ByRegion() {
         {view.status === "ok" && view.staleSince !== null && (
           <>, as of {formatUtcTime(view.staleSince)} utc</>
         )}
-        .
+        . circles on the map scale with registered nodes.
       </SectionHeading>
+      <RegionMap
+        rows={rows}
+        label="map of registered nodes by region"
+        pointLabel={pointLabel}
+        className="my-6"
+      />
       <DragScroll label="by region table">
         <Table>
           <TableHeader>
@@ -110,7 +133,7 @@ export function ByRegion() {
                       {region.code === UNKNOWN_REGION ? "??" : region.code}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      {countryName(region.code)}
+                      {regionName(region.code)}
                     </span>
                   </div>
                 </TableCell>

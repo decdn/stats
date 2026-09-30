@@ -28,6 +28,17 @@ export function formatBytes(bytes: number) {
   return `${value.toFixed(unit === "B" ? 0 : 1)} ${unit}`
 }
 
+const regionNames = new Intl.DisplayNames(["en"], { type: "region" })
+
+// alpha-2 code → "germany"; "" for a code Intl doesn't know.
+export function countryName(code: string) {
+  try {
+    return regionNames.of(code)?.toLowerCase() ?? ""
+  } catch {
+    return ""
+  }
+}
+
 // 6-decimal USDC base units → "0.318204", without going through a float.
 export function formatUsdc(base: string) {
   const value = BigInt(base)
