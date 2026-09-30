@@ -42,7 +42,9 @@ export function MetricRegisteredNodes() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-medium">registered nodes</CardTitle>
+        <CardTitle role="heading" aria-level={3} className="font-medium">
+          registered nodes
+        </CardTitle>
       </CardHeader>
       <CardContent className={enterClass(view.status === "loading")}>
         <div className="flex items-baseline gap-1.5">

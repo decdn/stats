@@ -19,6 +19,9 @@ export default function Page() {
           <div className="mx-auto flex w-full max-w-frame flex-1 flex-col gap-16">
             <Hero />
             <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              {/* Visually the hero heads the cards; this puts them in the
+                  heading outline under the h1. */}
+              <h2 className="sr-only">metrics</h2>
               <MetricValueSettled />
               <MetricBytesServed />
               <MetricRegisteredNodes />
