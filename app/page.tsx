@@ -13,7 +13,9 @@ import { StatsProvider } from "@/lib/stats"
 export default function Page() {
   return (
     <StatsProvider>
-      <div className="flex min-h-svh flex-col bg-background">
+      {/* The header's metrics link targets this wrapper rather than the cards'
+          section, so "#metrics" lands on the page top: the hero heads them. */}
+      <div id="metrics" className="flex min-h-svh flex-col bg-background">
         <SiteHeader />
         <main className="flex flex-1 flex-col px-frame-gutter">
           <div className="mx-auto flex w-full max-w-frame flex-1 flex-col gap-16">
