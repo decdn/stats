@@ -4,11 +4,11 @@ import { useEffect, useRef, useState } from "react"
 
 import { cn } from "@/lib/utils"
 
-// by-region and settlements are ids on their blocks' <section>. No element
-// has the id "top", so per the HTML spec "#top" scrolls to the top of the
-// page: metrics are the cards right under the hero, and the top shows both.
+// by-region and settlements are ids on their blocks' <section>. "metrics" is
+// on the page wrapper in app/page.tsx, so it scrolls to the top of the page:
+// metrics are the cards right under the hero, and the top shows both.
 const SECTIONS = [
-  { id: "top", label: "metrics" },
+  { id: "metrics", label: "metrics" },
   { id: "by-region", label: "by region" },
   { id: "settlements", label: "settlements" },
 ] as const
