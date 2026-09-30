@@ -32,10 +32,13 @@ type Row = {
   time: string
   operator: string
   operatorHref: string
+  // Screen readers get the full hex the cell truncates, and the new tab.
+  operatorLabel: string
   bytes: string
   value: string
   tx: string
   txHref: string
+  txLabel: string
 }
 
 type TableData = {
@@ -75,10 +78,12 @@ function settlementsData(result: StatsResult): TableData {
         time,
         operator: truncateHex(row.operator),
         operatorHref: `${explorerUrl}/address/${row.operator}`,
+        operatorLabel: `operator ${row.operator}, opens in a new tab`,
         bytes: formatBytes(Number(row.bytesDelivered)),
         value: formatUsdc(row.amount),
         tx: truncateHex(row.txHash, 8),
         txHref: `${explorerUrl}/tx/${row.txHash}`,
+        txLabel: `transaction ${row.txHash}, opens in a new tab`,
       }
     }),
     emptyLabel: "no settlements indexed yet",
@@ -158,6 +163,7 @@ export function SettlementsTable() {
                   <TableCell>
                     <a
                       href={settlement.operatorHref}
+                      aria-label={settlement.operatorLabel}
                       target="_blank"
                       rel="noreferrer"
                       className={linkClassName}
@@ -174,6 +180,7 @@ export function SettlementsTable() {
                   <TableCell className="text-right">
                     <a
                       href={settlement.txHref}
+                      aria-label={settlement.txLabel}
                       target="_blank"
                       rel="noreferrer"
                       className={linkClassName}
