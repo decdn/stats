@@ -24,7 +24,7 @@ pnpm install
 pnpm dev
 ```
 
-Then open http://localhost:3000. The page needs no `.env`: it fetches the live production file, `https://data.decdn.org/stats-421614.json`, from the browser. Set `NEXT_PUBLIC_STATS_URL` in `.env` to read another URL, which must send CORS headers. Until the file loads, every section says "loading"; if the first fetch fails they say "stats unavailable". After that a failed refresh keeps the last stats on screen, marked "as of …" once the worker's last write is over 15 minutes older than the last fetch attempt.
+Then open http://localhost:3000. The page needs no `.env`: it fetches the live production file, `https://data.decdn.org/stats-421614.json`, from the browser. Set `NEXT_PUBLIC_STATS_URL` in `.env` to read another URL, which must send CORS headers. Every section that shows live data is a client component, so the served HTML only ever says "loading"; if the first fetch fails the sections say "stats unavailable". After that a failed refresh keeps the last stats on screen. The metric cards and the by-region note add "as of …" once the worker's last write is over 15 minutes older than the last fetch attempt, and the hero's meta line always shows when the stats were indexed.
 
 ### Running the indexer locally
 
@@ -34,7 +34,7 @@ pnpm index             # one cron tick into a locally emulated R2 bucket
 npx wrangler r2 object get decdn-stats/stats-421614.json --local --pipe
 ```
 
-Each tick indexes at most `LOG_CHUNK_BLOCKS × MAX_CHUNKS_PER_RUN` blocks (see [`wrangler.jsonc`](wrangler.jsonc)) past `lastBlock`, so the first backfill takes a few runs of `pnpm index`; set `LOG_CHUNK_BLOCKS=1000000` in `.env` if your RPC allows wide `eth_getLogs` ranges. `pnpm index` takes its bindings and vars from `wrangler.jsonc` plus `.env`, and the emulated bucket persists in `.wrangler/state`; with the `R2_*` credentials set it writes the real bucket instead. To render a local file, serve it with CORS headers and point `NEXT_PUBLIC_STATS_URL` at it. Until the index has caught up with the chain the metric cards read "catching up · block N" and the settlements table footer "indexing · block N".
+Each tick indexes at most `LOG_CHUNK_BLOCKS × MAX_CHUNKS_PER_RUN` blocks (see [`wrangler.jsonc`](wrangler.jsonc)) past `lastBlock`, so the first backfill takes a few runs of `pnpm index`; set `LOG_CHUNK_BLOCKS=1000000` in `.env` if your RPC allows wide `eth_getLogs` ranges. `pnpm index` takes its bindings and vars from `wrangler.jsonc` plus `.env`, and the emulated bucket persists in `.wrangler/state`; with the `R2_*` credentials set it writes the real bucket instead. To render a local file, serve it with CORS headers and point `NEXT_PUBLIC_STATS_URL` at it. Until the index has caught up with the chain the metric cards and the by-region table read "catching up · block N", and the hero and the settlements table footer "indexing · block N".
 
 ## Deploying to Cloudflare
 
@@ -70,7 +70,7 @@ There is no test framework in this project. Verify changes with `pnpm typecheck 
 app/            layout, globals.css, and page.tsx — the only composition point
 blocks/         page sections (hero, metric-*, by-region, settlements); charts/ holds the metric cards' client charts and their shared tooltip
 globals/        chrome reused across sections (Header, Footer, SectionHeading, Wordmark, DragScroll, Cursor)
-components/ui/  unmodified shadcn/ui primitives
+components/     theme-provider.tsx (next-themes, plus the theme crossfade); ui/ holds unmodified shadcn/ui primitives
 lib/stats.tsx   StatsProvider + useStats() — fetches the public stats file in the browser
 lib/metrics.ts  stats file → metric card view models (headline, 24h change, hourly series)
 lib/regions.ts  stats file → by-region rows (nodes, bytes, cache hit)
@@ -91,7 +91,7 @@ The three metric cards are deliberately separate files rather than one parameter
 - Visual voice: lowercase copy, `tabular-nums` for figures, and the `type-*` text roles in `app/globals.css` (`type-micro` for metadata labels).
 - Import paths use the `@/*` alias rooted at the project directory.
 - Prettier: no semicolons, double quotes, 2-space indent, 80 columns, with `prettier-plugin-tailwindcss` sorting classes.
-- Commits follow Conventional Commits, checked by the local `commit-msg` hook.
+- Commits follow Conventional Commits, checked by the local `commit-msg` hook. The hook never sees a squash merge's title, so keep PR titles conventional too.
 
 ## Adding UI components
 
