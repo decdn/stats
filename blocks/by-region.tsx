@@ -95,7 +95,7 @@ export function ByRegion() {
         rows={rows}
         label="map of registered nodes by region"
         pointLabel={pointLabel}
-        className="mb-6"
+        className="my-6"
       />
       <DragScroll label="by region table">
         <Table>
