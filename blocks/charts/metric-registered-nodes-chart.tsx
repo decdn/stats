@@ -32,6 +32,10 @@ export function RegisteredNodesChart({ series }: { series: MetricPoint[] }) {
     <ChartContainer config={chartConfig} className="aspect-auto h-24 w-full">
       <LineChart
         accessibilityLayer
+        // A named image rather than recharts' default unnamed application; it
+        // stays focusable, so the arrow keys still step the tooltip.
+        role="img"
+        title="registered nodes at the end of each of the last 24 hours"
         data={series}
         margin={{ left: 4, right: 6, top: 6, bottom: 0 }}
       >
