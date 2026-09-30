@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic"
 
+import { ChartUnavailable } from "@/blocks/charts/chart-unavailable"
 import {
   Card,
   CardContent,
@@ -15,14 +16,23 @@ import { useStats } from "@/lib/stats"
 import { cn, enterClass, formatUtcTime } from "@/lib/utils"
 
 // recharts is the page's heaviest dependency and draws nothing until stats
-// arrive, so it stays out of the hydration bundle: the import starts when this
-// module loads, alongside the stats fetch, and the h-24 box holds the chart's
-// place until it lands.
-const chartModule = import("@/blocks/charts/metric-value-settled-chart")
-const ValueSettledChart = dynamic(
-  () => chartModule.then((chart) => chart.ValueSettledChart),
-  { ssr: false, loading: () => <div className="h-24" /> }
+// arrive, so it stays out of the hydration bundle. The import is hoisted out
+// of dynamic(), whose loader would only run on the chart's first render, after
+// the stats land: this way the chunk downloads while they're still being
+// fetched, and the h-24 box holds the chart's place until it lands. A chunk
+// that fails to load leaves a labeled gap rather than an error that would
+// take the whole page down.
+const chartModule = import("@/blocks/charts/metric-value-settled-chart").then(
+  (chart) => chart.ValueSettledChart,
+  (error: unknown) => {
+    console.error(error)
+    return ChartUnavailable
+  }
 )
+const ValueSettledChart = dynamic(() => chartModule, {
+  ssr: false,
+  loading: () => <div className="h-24" />,
+})
 
 // No default: a status added to MetricView fails to compile here instead of
 // borrowing another status's label.
