@@ -43,7 +43,7 @@ export function BytesServedChart({
         // keyboard users. aria-label, not title: an svg <title> shows as a
         // native hover tooltip over recharts' own.
         role="img"
-        aria-label="bytes served, all-time total at the end of each of the last 24 hours"
+        aria-label="bytes served, all-time total at the end of each of the last 30 days"
         data={series}
         margin={{ left: 4, right: 6, top: 6, bottom: 0 }}
       >

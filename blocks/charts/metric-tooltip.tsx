@@ -15,11 +15,11 @@ type MetricTooltipProps = Omit<
   fractionDigits?: number
 }
 
-// A single-series metric chart's hover card: the hour, then the series name
-// and its value in the headline's unit and precision, with the headline's
-// locale-free number format. Rendered through the shadcn tooltip's
-// `formatter`, which replaces its whole row, so the row redraws the line
-// indicator and the hour label itself.
+// A single-series metric chart's hover card: the bucket (an hour or a day),
+// then the series name and its value in the headline's unit and precision,
+// with the headline's locale-free number format. Rendered through the shadcn
+// tooltip's `formatter`, which replaces its whole row, so the row redraws the
+// line indicator and the bucket label itself.
 export function MetricTooltipContent({
   seriesLabel,
   unit,
