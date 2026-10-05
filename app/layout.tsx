@@ -16,8 +16,8 @@ const description =
   "don't trust, verify. decdn's network, live: every byte served and every dollar settled, read straight from on-chain logs."
 
 // The share card mirrors decdn.org's: the same site name, locale and X
-// account. Its image is app/opengraph-image.tsx; X falls back to og:image, so
-// there's no twitter-image.
+// account. Its image is app/opengraph-image.tsx, which Next also emits as
+// twitter:image, so there's no twitter-image.
 export const metadata: Metadata = {
   metadataBase: new URL("https://stats.decdn.org"),
   title: "network status",

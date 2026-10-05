@@ -11,7 +11,7 @@ export const contentType = "image/png"
 // output: "export" needs route handlers, this one included, marked static.
 export const dynamic = "force-static"
 
-// The SVG carries its own underscore color (--accent-green).
+// The SVG bakes in its own underscore color (#0F9D6A), so none is set here.
 const wordmark = await readFile(
   join(process.cwd(), "public/wordmark-light.svg"),
   "base64"
