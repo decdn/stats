@@ -13,7 +13,7 @@ const fontMono = Geist_Mono({
 })
 
 const description =
-  "raw on-chain state — value settled, bytes served, active nodes."
+  "don't trust, verify. decdn's network, live: every byte served and every dollar settled, read straight from on-chain logs."
 
 // The share card mirrors decdn.org's: the same site name, locale and X
 // account. Its image is app/opengraph-image.tsx; X falls back to og:image, so
