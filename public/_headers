@@ -1,0 +1,4 @@
+# Workers assets type files by extension, and the static export writes the
+# share card (app/opengraph-image.tsx) without one.
+/opengraph-image
+  Content-Type: image/png
