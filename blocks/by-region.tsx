@@ -55,8 +55,26 @@ function emptyLabel(view: RegionsView): string {
   }
 }
 
-function cacheHit(row: RegionRow) {
-  return row.cacheHit === null ? "—" : `${(row.cacheHit * 100).toFixed(1)}%`
+// The figure with a small fill bar beside it. The figure carries the value, so
+// the bar is aria-hidden; it shows from sm up to keep the table narrow on
+// phones, and the figure's fixed width keeps the bars aligned down the column.
+function CacheHit({ row }: { row: RegionRow }) {
+  if (row.cacheHit === null) return <>—</>
+  const percent = row.cacheHit * 100
+  return (
+    <div className="flex items-center justify-end gap-2">
+      <div
+        aria-hidden
+        className="hidden h-1.5 w-12 overflow-hidden rounded-full bg-muted-foreground/20 sm:block"
+      >
+        <div
+          className="h-full bg-accent-green/50 transition-all"
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+      <span className="w-14">{percent.toFixed(1)}%</span>
+    </div>
+  )
 }
 
 export function ByRegion() {
@@ -119,7 +137,7 @@ export function ByRegion() {
                   {formatBytes(Number(region.bytesServed))}
                 </TableCell>
                 <TableCell className={cellClassName}>
-                  {cacheHit(region)}
+                  <CacheHit row={region} />
                 </TableCell>
               </TableRow>
             ))}
@@ -140,7 +158,7 @@ export function ByRegion() {
                   {formatBytes(Number(view.network.bytesServed))}
                 </TableCell>
                 <TableCell className={cellClassName}>
-                  {cacheHit(view.network)}
+                  <CacheHit row={view.network} />
                 </TableCell>
               </TableRow>
             </TableFooter>
