@@ -1,5 +1,6 @@
 "use client"
 
+import { Progress } from "@/components/ui/progress"
 import {
   Table,
   TableBody,
@@ -55,8 +56,21 @@ function emptyLabel(view: RegionsView): string {
   }
 }
 
-function cacheHit(row: RegionRow) {
-  return row.cacheHit === null ? "—" : `${(row.cacheHit * 100).toFixed(1)}%`
+// The figure with a small fill bar beside it. The bar is decorative; the
+// figure carries the value.
+function CacheHit({ row }: { row: RegionRow }) {
+  if (row.cacheHit === null) return <>—</>
+  const percent = row.cacheHit * 100
+  return (
+    <div className="flex items-center justify-end gap-2">
+      <Progress
+        value={percent}
+        aria-hidden
+        className="hidden w-12 sm:flex [&_[data-slot=progress-indicator]]:bg-accent-green/50 [&_[data-slot=progress-track]]:bg-muted-foreground/20"
+      />
+      <span className="w-14">{percent.toFixed(1)}%</span>
+    </div>
+  )
 }
 
 export function ByRegion() {
@@ -119,7 +133,7 @@ export function ByRegion() {
                   {formatBytes(Number(region.bytesServed))}
                 </TableCell>
                 <TableCell className={cellClassName}>
-                  {cacheHit(region)}
+                  <CacheHit row={region} />
                 </TableCell>
               </TableRow>
             ))}
@@ -140,7 +154,7 @@ export function ByRegion() {
                   {formatBytes(Number(view.network.bytesServed))}
                 </TableCell>
                 <TableCell className={cellClassName}>
-                  {cacheHit(view.network)}
+                  <CacheHit row={view.network} />
                 </TableCell>
               </TableRow>
             </TableFooter>
