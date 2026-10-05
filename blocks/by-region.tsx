@@ -1,6 +1,5 @@
 "use client"
 
-import { Progress } from "@/components/ui/progress"
 import {
   Table,
   TableBody,
@@ -56,18 +55,23 @@ function emptyLabel(view: RegionsView): string {
   }
 }
 
-// The figure with a small fill bar beside it. The bar is decorative; the
-// figure carries the value.
+// The figure with a small fill bar beside it. The figure carries the value, so
+// the bar is aria-hidden; it shows from sm up to keep the table narrow on
+// phones, and the figure's fixed width keeps the bars aligned down the column.
 function CacheHit({ row }: { row: RegionRow }) {
   if (row.cacheHit === null) return <>—</>
   const percent = row.cacheHit * 100
   return (
     <div className="flex items-center justify-end gap-2">
-      <Progress
-        value={percent}
+      <div
         aria-hidden
-        className="hidden w-12 sm:flex [&_[data-slot=progress-indicator]]:bg-accent-green/50 [&_[data-slot=progress-track]]:bg-muted-foreground/20"
-      />
+        className="hidden h-1.5 w-12 overflow-hidden rounded-full bg-muted-foreground/20 sm:block"
+      >
+        <div
+          className="h-full bg-accent-green/50 transition-all"
+          style={{ width: `${percent}%` }}
+        />
+      </div>
       <span className="w-14">{percent.toFixed(1)}%</span>
     </div>
   )
