@@ -12,10 +12,30 @@ const fontMono = Geist_Mono({
   variable: "--font-mono",
 })
 
+const description =
+  "don't trust, verify. decdn's network, live: every byte served and every dollar settled, read straight from on-chain logs."
+
+// The share card mirrors decdn.org's: the same site name, locale and X
+// account. Its image is app/opengraph-image.tsx, which Next also emits as
+// twitter:image, so there's no twitter-image.
 export const metadata: Metadata = {
+  metadataBase: new URL("https://stats.decdn.org"),
   title: "network status",
-  description:
-    "raw on-chain state read from arbitrum sepolia — value settled, bytes served, active nodes.",
+  description,
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: "decdn network status",
+    description,
+    url: "/",
+    siteName: "deCDN",
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    site: "@decdn_",
+    creator: "@decdn_",
+  },
 }
 
 export default function RootLayout({
