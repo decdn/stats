@@ -1,10 +1,12 @@
 import type { Stats, StatsResult } from "@/lib/stats"
 import { formatBytes, formatUsdcCents, scaleBytes } from "@/lib/utils"
 
-// The metric cards' view of stats.json: a headline, a rolling-24h change and
-// an hourly sparkline. Hours are the worker's UTC buckets, anchored to the
-// newest one — the last caught-up run's hour — not to wall-clock time; a
-// file that stopped updating is flagged stale instead.
+// The metric cards' view of stats.json: a headline, the change over the
+// card's window and a sparkline across it — the last 24 hourly buckets for
+// value settled, the last 30 daily ones for bytes served and registered
+// nodes. Buckets are the worker's UTC hours and days, anchored to the newest
+// one — the last caught-up run's — not to wall-clock time; a file that
+// stopped updating is flagged stale instead.
 
 export type MetricPoint = {
   t: string
@@ -14,7 +16,7 @@ export type MetricPoint = {
 export type Metric = {
   value: string
   unit?: string
-  // null when there's no figure from 24h ago to compare against.
+  // null when there's no figure from the window's start to compare against.
   delta: { text: string; up: boolean } | null
   series: MetricPoint[]
 }
@@ -23,14 +25,15 @@ export type Metric = {
 // Blocks own the copy for each.
 export type MetricView =
   // `staleSince` (unix seconds) is set when the worker hasn't written for a
-  // while: the headline is still true as of then, the 24h change isn't.
+  // while: the headline is still true as of then, the change isn't.
   | { status: "ok"; metric: Metric; staleSince: number | null }
   | { status: "loading" | "unindexed" | "error" }
-  // Totals are partial and the hourly window is in the past (backfill,
+  // Totals are partial and the window is in the past (backfill,
   // re-index, outage recovery), so nothing is shown until it's caught up.
   | { status: "catching-up"; lastBlock: number }
 
 const windowHours = 24
+const windowDays = 30
 // Three missed 5-minute cron ticks.
 const staleAfterMs = 15 * 60_000
 
@@ -67,26 +70,49 @@ function hourLabel(hour: string) {
   return `${hour.slice(11, 13)}:00 utc`
 }
 
-function hoursBefore(hour: string, hours: number) {
-  const ms = Date.parse(`${hour}:00:00Z`) - hours * 3_600_000
-  return new Date(ms).toISOString().slice(0, 13)
+// "2026-10-05" → "oct 5"
+function dayLabel(date: string) {
+  return new Date(`${date}T00:00:00Z`)
+    .toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      timeZone: "UTC",
+    })
+    .toLowerCase()
 }
 
-// All-time total at the end of each of the last 24 hourly buckets, walked
-// back from `totals`, and how much of it landed inside that window.
-function cumulative(stats: Stats, field: "valueSettled" | "bytesServed") {
+function daysBefore(date: string, days: number) {
+  const ms = Date.parse(`${date}T00:00:00Z`) - days * 86_400_000
+  return new Date(ms).toISOString().slice(0, 10)
+}
+
+type Field = "valueSettled" | "bytesServed"
+
+// All-time total at the end of each bucket in `window` (the newest buckets),
+// walked back from `totals`, and how much of it landed inside the window.
+function cumulative<P extends Record<Field, string>>(
+  stats: Stats,
+  field: Field,
+  window: P[],
+  label: (point: P) => string
+) {
   const total = BigInt(stats.totals[field])
   let running = total
   const series: { t: string; total: bigint }[] = []
-  for (const point of stats.hourly.slice(-windowHours).reverse()) {
-    series.unshift({ t: hourLabel(point.hour), total: running })
+  for (const point of [...window].reverse()) {
+    series.unshift({ t: label(point), total: running })
     running -= BigInt(point[field])
   }
   return { total, series, delta: total - running }
 }
 
 export function valueSettledMetric(stats: Stats): Metric {
-  const { total, series, delta } = cumulative(stats, "valueSettled")
+  const { total, series, delta } = cumulative(
+    stats,
+    "valueSettled",
+    stats.hourly.slice(-windowHours),
+    (point) => hourLabel(point.hour)
+  )
   return {
     value: formatUsdcCents(total.toString()),
     unit: "usdc",
@@ -99,7 +125,12 @@ export function valueSettledMetric(stats: Stats): Metric {
 }
 
 export function bytesServedMetric(stats: Stats): Metric {
-  const { total, series, delta } = cumulative(stats, "bytesServed")
+  const { total, series, delta } = cumulative(
+    stats,
+    "bytesServed",
+    stats.daily.slice(-windowDays),
+    (point) => dayLabel(point.date)
+  )
   const { value, unit, divisor } = scaleBytes(Number(total))
   return {
     // Whole bytes stay whole, as in formatBytes.
@@ -114,15 +145,15 @@ export function bytesServedMetric(stats: Stats): Metric {
   }
 }
 
-// The registered-set size now, with its end-of-hour count over the last 24
-// hours. The delta is null until the series reaches back 24 hours.
+// The registered-set size now, with its end-of-day count over the last 30
+// days. The delta is null until the series reaches back 30 days.
 export function registeredNodesMetric(stats: Stats): Metric {
-  const window = stats.hourly.slice(-windowHours)
+  const window = stats.daily.slice(-windowDays)
   const latest = window.at(-1)
   const base =
     latest &&
-    stats.hourly.find(
-      (point) => point.hour === hoursBefore(latest.hour, windowHours)
+    stats.daily.find(
+      (point) => point.date === daysBefore(latest.date, windowDays)
     )
   const count = Object.keys(stats.nodes).length
   const change = base ? count - base.registeredNodes : null
@@ -136,7 +167,7 @@ export function registeredNodesMetric(stats: Stats): Metric {
             up: change > 0,
           },
     series: window.map((point) => ({
-      t: hourLabel(point.hour),
+      t: dayLabel(point.date),
       value: point.registeredNodes,
     })),
   }

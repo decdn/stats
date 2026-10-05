@@ -74,7 +74,7 @@ blocks/         page sections (hero, metric-*, by-region, settlements); charts/ 
 globals/        chrome reused across sections (Header, Footer, SectionHeading, Wordmark, DragScroll, Cursor)
 components/     theme-provider.tsx (next-themes, plus the theme crossfade); ui/ holds unmodified shadcn/ui primitives
 lib/stats.tsx   StatsProvider + useStats() — fetches the public stats file in the browser
-lib/metrics.ts  stats file → metric card view models (headline, 24h change, hourly series)
+lib/metrics.ts  stats file → metric card view models (headline, change, 24h hourly / 30d daily series)
 lib/regions.ts  stats file → by-region rows (nodes, bytes, cache hit)
 worker/src/     the Worker entry and the indexer (cron → R2)
 ```
