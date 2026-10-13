@@ -3,7 +3,7 @@ import { formatBytes, formatUsdcCents, scaleBytes } from "@/lib/utils"
 
 // The metric cards' view of stats.json: a headline, the change over the
 // card's window and a sparkline across it — the last 24 hourly buckets for
-// value settled, the last 30 daily ones for bytes served and registered
+// value settled, the last 14 daily ones for bytes served and registered
 // nodes. Buckets are the worker's UTC hours and days, anchored to the newest
 // one — the last caught-up run's — not to wall-clock time; a file that
 // stopped updating is flagged stale instead.
@@ -33,7 +33,7 @@ export type MetricView =
   | { status: "catching-up"; lastBlock: number }
 
 const windowHours = 24
-const windowDays = 30
+const windowDays = 14
 // Three missed 5-minute cron ticks.
 const staleAfterMs = 15 * 60_000
 
@@ -145,8 +145,8 @@ export function bytesServedMetric(stats: Stats): Metric {
   }
 }
 
-// The registered-set size now, with its end-of-day count over the last 30
-// days. The delta is null until the series reaches back 30 days.
+// The registered-set size now, with its end-of-day count over the last 14
+// days. The delta is null until the series reaches back 14 days.
 export function registeredNodesMetric(stats: Stats): Metric {
   const window = stats.daily.slice(-windowDays)
   const latest = window.at(-1)

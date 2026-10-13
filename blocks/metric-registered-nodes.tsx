@@ -86,7 +86,7 @@ export function MetricRegisteredNodes() {
             >
               {metric.delta.text}
             </span>{" "}
-            <span className="text-muted-foreground">in the last 30d</span>
+            <span className="text-muted-foreground">in the last 14d</span>
           </p>
         )}
         {view.status === "loading" && (
