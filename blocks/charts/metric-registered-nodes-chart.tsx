@@ -37,7 +37,7 @@ export function RegisteredNodesChart({ series }: { series: MetricPoint[] }) {
         // keyboard users. aria-label, not title: an svg <title> shows as a
         // native hover tooltip over recharts' own.
         role="img"
-        aria-label="registered nodes at the end of each of the last 14 days"
+        aria-label="registered nodes at the end of each of the last 24 hours"
         data={series}
         margin={{ left: 4, right: 6, top: 6, bottom: 0 }}
       >
