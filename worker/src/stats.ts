@@ -3,9 +3,8 @@
 // browser for its types, asStats and UNKNOWN_REGION.
 
 export const DAILY_RETENTION_DAYS = 92
-// 24 buckets for the page's rolling-24h window, plus the hour before it so
-// the registered-node delta has a count from 24h ago to compare against.
-export const HOURLY_RETENTION_HOURS = 25
+// 24 buckets for the page's rolling-24h value-settled window.
+export const HOURLY_RETENTION_HOURS = 24
 export const RECENT_SETTLEMENTS = 50
 // Where a node without a valid ISO 3166-1 alpha-2 `regionHint` is counted,
 // and where bytes settled by a no-longer-registered operator land.
@@ -29,6 +28,8 @@ export type DailyPoint = {
   valueSettled: string
   bytesServed: string
   settlementCount: number
+  // CapacityBond registered-set size at the end of this UTC day.
+  registeredNodes: number
 }
 
 export type HourlyPoint = {
@@ -37,8 +38,6 @@ export type HourlyPoint = {
   valueSettled: string
   bytesServed: string
   settlementCount: number
-  // CapacityBond registered-set size at the end of this hour.
-  registeredNodes: number
 }
 
 export type RegisteredNode = {
@@ -170,7 +169,7 @@ export function asStats(value: unknown): Stats | null {
     !isUint(stats.totals?.valueSettled) ||
     !isUint(stats.totals?.bytesServed) ||
     typeof stats.totals?.settlementCount !== "number" ||
-    stats.hourly.some((point) => typeof point?.registeredNodes !== "number") ||
+    stats.daily.some((point) => typeof point?.registeredNodes !== "number") ||
     !isRecord(stats.nodes) ||
     !isRecord(stats.poolOwners) ||
     !isRecord(stats.regions)
@@ -218,25 +217,14 @@ type Buckets<P> = {
   empty: (key: string) => P
 }
 
-const days: Buckets<DailyPoint> = {
-  key: (point) => point.date,
-  next: (date) => utcDate(Date.parse(`${date}T00:00:00Z`) / 1000 + 86_400),
-  empty: (date) => ({
-    date,
-    valueSettled: "0",
-    bytesServed: "0",
-    settlementCount: 0,
-  }),
-}
-
-// New hourly buckets (and the gap fill before them) carry `registeredNodes`
-// forward: nothing changed the registered set in an hour no event touched.
-function hoursWith(registeredNodes: number): Buckets<HourlyPoint> {
+// New daily buckets (and the gap fill before them) carry `registeredNodes`
+// forward: nothing changed the registered set on a day no event touched.
+function daysWith(registeredNodes: number): Buckets<DailyPoint> {
   return {
-    key: (point) => point.hour,
-    next: (hour) => utcHour(Date.parse(`${hour}:00:00Z`) / 1000 + 3_600),
-    empty: (hour) => ({
-      hour,
+    key: (point) => point.date,
+    next: (date) => utcDate(Date.parse(`${date}T00:00:00Z`) / 1000 + 86_400),
+    empty: (date) => ({
+      date,
       valueSettled: "0",
       bytesServed: "0",
       settlementCount: 0,
@@ -245,15 +233,26 @@ function hoursWith(registeredNodes: number): Buckets<HourlyPoint> {
   }
 }
 
+const hours: Buckets<HourlyPoint> = {
+  key: (point) => point.hour,
+  next: (hour) => utcHour(Date.parse(`${hour}:00:00Z`) / 1000 + 3_600),
+  empty: (hour) => ({
+    hour,
+    valueSettled: "0",
+    bytesServed: "0",
+    settlementCount: 0,
+  }),
+}
+
 function registeredCount(stats: Stats) {
   return Object.keys(stats.nodes).length
 }
 
-function hourBucket(stats: Stats, timestamp: number) {
+function dayBucket(stats: Stats, timestamp: number) {
   return bucket(
-    stats.hourly,
-    hoursWith(registeredCount(stats)),
-    utcHour(timestamp)
+    stats.daily,
+    daysWith(registeredCount(stats)),
+    utcDate(timestamp)
   )
 }
 
@@ -269,11 +268,11 @@ function bucket<P>(points: P[], buckets: Buckets<P>, key: string): P {
   }
   if (key < buckets.key(first)) {
     // Before the series start. Events arrive in block order, so this only
-    // happens when a caught-up run opened the current hour in an empty series
+    // happens when a caught-up run opened the current bucket in an empty series
     // (trimStats) and an event mined up to CONFIRMATIONS blocks (~5 min) plus
     // a cron interval earlier lands on the next run.
     const front: P[] = []
-    for (let cursor = key; cursor < buckets.key(first);) {
+    for (let cursor = key; cursor < buckets.key(first); ) {
       front.push(buckets.empty(cursor))
       cursor = buckets.next(cursor)
     }
@@ -342,20 +341,20 @@ function regionTotals(stats: Stats, region: string) {
 }
 
 // Changes the registered set at `timestamp` and stamps the new count on that
-// hour and every later one already in the series (a caught-up run has
+// day and every later one already in the series (a caught-up run has
 // zero-filled up to "now", and this event may land just before that).
 function changeRegistered(
   stats: Stats,
   timestamp: number,
   change: (nodes: Stats["nodes"]) => void
 ) {
-  // Opened before the change, so any gap before this hour carries the old
+  // Opened before the change, so any gap before this day carries the old
   // count.
-  const hour = hourBucket(stats, timestamp).hour
+  const date = dayBucket(stats, timestamp).date
   change(stats.nodes)
   const count = registeredCount(stats)
-  for (const point of stats.hourly) {
-    if (point.hour >= hour) point.registeredNodes = count
+  for (const point of stats.daily) {
+    if (point.date >= date) point.registeredNodes = count
   }
 }
 
@@ -365,8 +364,8 @@ function applySettled(stats: Stats, row: SettlementRow, region: string) {
   stats.totals.settlementCount += 1
 
   for (const point of [
-    bucket(stats.daily, days, utcDate(row.timestamp)),
-    hourBucket(stats, row.timestamp),
+    dayBucket(stats, row.timestamp),
+    bucket(stats.hourly, hours, utcHour(row.timestamp)),
   ]) {
     point.valueSettled = add(point.valueSettled, row.amount)
     point.bytesServed = add(point.bytesServed, row.bytesDelivered)
@@ -444,14 +443,13 @@ export function applyEvents(stats: Stats, events: ChainEvent[]) {
 }
 
 // Drops history outside the retention windows. Pass `now` (unix seconds) only
-// once the indexer has caught up with the chain: it zero-fills to the present
-// (the hourly series always, so the registered-node count has a current
-// hour), and doing that mid-backfill could trim buckets that still have
-// events to land.
+// once the indexer has caught up with the chain: it zero-fills both series to
+// the present (so the registered-node count has a current day), and doing
+// that mid-backfill could trim buckets that still have events to land.
 export function trimStats(stats: Stats, now?: number) {
   if (now !== undefined) {
-    if (stats.daily.length > 0) bucket(stats.daily, days, utcDate(now))
-    hourBucket(stats, now)
+    dayBucket(stats, now)
+    bucket(stats.hourly, hours, utcHour(now))
   }
   stats.daily = stats.daily.slice(-DAILY_RETENTION_DAYS)
   stats.hourly = stats.hourly.slice(-HOURLY_RETENTION_HOURS)
