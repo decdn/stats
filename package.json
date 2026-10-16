@@ -53,13 +53,13 @@
     "eslint": "^9",
     "eslint-config-next": "16.4.0",
     "husky": "^9.1.7",
-    "lint-staged": "^17.5.1",
-    "prettier": "^3.8.3",
+    "lint-staged": "^17.6.0",
+    "prettier": "^3.9.9",
     "prettier-plugin-tailwindcss": "^0.8.0",
-    "shadcn": "^4.21.0",
+    "shadcn": "^4.21.4",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5",
-    "wrangler": "^4.144.0"
+    "wrangler": "^4.149.0"
   }
 }
