@@ -31,8 +31,8 @@ export type MetricView =
   | { status: "catching-up"; lastBlock: number }
 
 const windowHours = 24
-// Three missed 5-minute cron ticks.
-const staleAfterMs = 15 * 60_000
+// Five missed one-minute cron ticks.
+const staleAfterMs = 5 * 60_000
 
 export function metricView(
   result: StatsResult,

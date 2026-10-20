@@ -270,7 +270,7 @@ function bucket<P>(points: P[], buckets: Buckets<P>, key: string): P {
   if (key < buckets.key(first)) {
     // Before the series start. Events arrive in block order, so this only
     // happens when a caught-up run opened the current hour in an empty series
-    // (trimStats) and an event mined up to CONFIRMATIONS blocks (~5 min) plus
+    // (trimStats) and an event mined up to CONFIRMATIONS blocks (~1 min) plus
     // a cron interval earlier lands on the next run.
     const front: P[] = []
     for (let cursor = key; cursor < buckets.key(first);) {
