@@ -15,7 +15,8 @@ import { statsStore } from "./store"
 
 // One cron tick: read the stats file, index up to MAX_CHUNKS_PER_RUN chunks
 // past lastBlock, write it back. Nothing is written if indexing throws, so the
-// next tick retries the same range.
+// next tick retries the same range. Ticks can overlap (a backfill tick can
+// outlast the minute); the store's conditional put keeps the first writer.
 export async function runIndex(env: Env) {
   const config = parseConfig(env)
   // No JSON-RPC batching: under load Infura answers a batch with HTTP 200 and
@@ -42,7 +43,8 @@ export async function runIndex(env: Env) {
     startBlock: Number(config.startBlock),
   }
   const existing = await store.get()
-  const resumed = existing === null ? null : resumeStats(existing, deployment)
+  const resumed =
+    existing === null ? null : resumeStats(existing.body, deployment)
   if (existing !== null && resumed === null) {
     console.log(
       `${store.key} is unreadable or from another deployment; re-indexing from scratch`
@@ -74,7 +76,18 @@ export async function runIndex(env: Env) {
   trimStats(stats, stats.caughtUp ? Date.now() / 1000 : undefined)
   stats.updatedAt = new Date().toISOString()
 
-  await store.put(serializeStats(stats))
+  const written = await store.put(
+    serializeStats(stats),
+    existing === null ? null : existing.etag
+  )
+  if (!written) {
+    // Another tick read the same file and finished first. Its write covers at
+    // least this range, so drop ours rather than overwrite a newer file.
+    console.log(
+      `${store.label} changed since this tick read it; dropping lastBlock=${stats.lastBlock}`
+    )
+    return
+  }
   console.log(
     `written to ${store.label}: lastBlock=${stats.lastBlock} head=${head} settlements=${stats.totals.settlementCount} nodes=${Object.keys(stats.nodes).length}${stats.caughtUp ? "" : " (catching up)"}`
   )
