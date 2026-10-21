@@ -14,7 +14,10 @@
     "binding": "ASSETS",
     "not_found_handling": "404-page",
   },
-  "triggers": { "crons": ["*/5 * * * *"] },
+  // Cloudflare's minimum. A tick should fit in the minute; two that overlap
+  // both resume from the same lastBlock, and the store's conditional put
+  // (worker/src/store.ts) drops the one that finishes second.
+  "triggers": { "crons": ["* * * * *"] },
   "r2_buckets": [
     // stats-<CHAIN_ID>.json: written by the cron, served publicly on
     // data.decdn.org (lib/stats.tsx). The browser fetch needs the bucket's
@@ -29,9 +32,17 @@
     "START_BLOCK": "310903026",
     "CAPACITY_BOND": "0x65a9e38F41B9bE2fcB97950a0E3c33e506E6E353",
     "PAYMENT_POOL": "0x351E5544471e11638b89DF8E3A3299c28E00cEc3",
-    "LOG_CHUNK_BLOCKS": "10000",
+    // Arbitrum Sepolia mines ~4 blocks/s. The three limits below were measured
+    // on the public RPC (sepolia-rollup.arbitrum.io/rpc) in 2026-10; re-check
+    // them if RPC_URL moves to another provider (QuickNode, for one, caps
+    // eth_getLogs at 10k blocks, and a tick that throws writes nothing, so a
+    // too-wide chunk stalls the indexer for good).
+    // The public RPC's range cap for a multi-address eth_getLogs (10M for one
+    // address). × MAX_CHUNKS_PER_RUN = 2M blocks per tick, ~6 days of chain.
+    "LOG_CHUNK_BLOCKS": "100000",
     "MAX_CHUNKS_PER_RUN": "20",
-    "CONFIRMATIONS": "1200",
+    // ~1 min of blocks: the RPC showed no replica lag beyond it.
+    "CONFIRMATIONS": "240",
   },
   // Branch Previews (`wrangler preview`, Workers Builds' non-production
   // deploy) inherit no vars or bindings except the assets and their ASSETS

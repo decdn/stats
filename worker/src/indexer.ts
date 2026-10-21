@@ -64,6 +64,8 @@ export async function indexEvents(
     ]
     // One request per block, in sequence rather than a parallel burst, to stay
     // under the RPC's per-second rate limit (see the transport in run.ts).
+    // The logs' own blockTimestamp is no shortcut: the public Arbitrum RPC
+    // sends 0x0 in it on every log.
     const blocks = []
     for (const blockNumber of blockNumbers) {
       blocks.push(await client.getBlock({ blockNumber }))

@@ -31,8 +31,10 @@ export type MetricView =
   | { status: "catching-up"; lastBlock: number }
 
 const windowHours = 24
-// Three missed 5-minute cron ticks.
-const staleAfterMs = 15 * 60_000
+// Five minutes without a worker write, as the page sees it. Normal lag is
+// already ~2 min (a cron tick, the file's 60s max-age, the page's 60s
+// refresh), so this fires after about three missed ticks.
+const staleAfterMs = 5 * 60_000
 
 export function metricView(
   result: StatsResult,
