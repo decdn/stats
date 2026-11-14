@@ -117,7 +117,11 @@ export function SettlementsTable() {
   const result = useStats()
   const { rows: settlements, emptyLabel, footer } = settlementsData(result)
   return (
-    <section id="settlements" className="flex w-full flex-col gap-5">
+    <section
+      id="settlements"
+      tabIndex={-1}
+      className="flex w-full flex-col gap-5 outline-none"
+    >
       <SectionHeading title="latest settlements">
         each row is a <span className="font-mono">FeeRouter.Settled</span> log
         on arbitrum sepolia. click a tx to check it.
