@@ -83,10 +83,11 @@ export function ByRegion() {
   return (
     <section
       id="by-region"
+      aria-labelledby="by-region-heading"
       tabIndex={-1}
       className="flex w-full flex-col gap-5 outline-none"
     >
-      <SectionHeading title="by region">
+      <SectionHeading id="by-region-heading" title="by region">
         registered nodes, and bytes served from{" "}
         <span className="font-mono">FeeRouter</span> settlements, grouped by the
         region each operator declares on{" "}

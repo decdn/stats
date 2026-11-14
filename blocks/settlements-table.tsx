@@ -119,10 +119,11 @@ export function SettlementsTable() {
   return (
     <section
       id="settlements"
+      aria-labelledby="settlements-heading"
       tabIndex={-1}
       className="flex w-full flex-col gap-5 outline-none"
     >
-      <SectionHeading title="latest settlements">
+      <SectionHeading id="settlements-heading" title="latest settlements">
         each row is a <span className="font-mono">FeeRouter.Settled</span> log
         on arbitrum sepolia. click a tx to check it.
       </SectionHeading>
